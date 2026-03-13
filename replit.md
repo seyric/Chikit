@@ -56,15 +56,16 @@ artifacts-monorepo/
    - 7-day expiry window, access scope controls
 
 ### Task #4 — Drug Database & Prescription Integration (DONE)
-1. **Drug Database** — 143 Indian medicines seeded (drugs table)
+1. **Drug Database** — 217 Indian medicines seeded (drugs table)
    - Drug search API: `GET /api/drugs?q=&limit=` (searches name, genericName, brandNames, drugClass)
-   - Interaction check API: `POST /api/drugs/check-interactions` (accepts drugNames array)
-   - Drug Database page at `/drug-database` with search, filters, and drug info cards
+   - Interaction check API: `POST /api/drugs/check-interactions` and `POST /api/drugs/interactions` (accepts drugNames array)
+   - Drug Database page at `/drug-database` with search, filters, paginated cards (20/page), and detail modal
 2. **Prescription Autocomplete** — DrugSearchInput component in patient consultation
    - Live search dropdown when typing drug name, auto-fills dosage on selection
    - Real-time interaction checking when drugs are selected
    - Warning banner displayed in prescription panel for known interactions
 3. **Patient Overview Alerts** — Active prescription drug interactions shown as red alert banner
+4. **Drug Allergy Alerts** — Patient overview checks active medications against recorded allergies, shows red alert banner for conflicts
 
 ## Demo Credentials
 
@@ -95,7 +96,9 @@ All routes are under `/api/`:
 - `/stats/dashboard` — Dashboard statistics
 - `/consent-requests` — Cross-hospital consent management (GET, POST, PATCH)
 - `/drugs?q=&limit=` — Drug search (GET)
+- `/drugs/:id` — Drug detail by ID (GET)
 - `/drugs/check-interactions` — Drug interaction check (POST, body: { drugNames: string[] })
+- `/drugs/interactions` — Drug interaction check alias (POST, body: { drugNames: string[] })
 
 ## Security
 

@@ -271,6 +271,37 @@ export default function PatientDetail() {
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="col-span-2 space-y-6">
+              {(() => {
+                const allergyText = (patient.allergies || "").toLowerCase();
+                const activeRxMeds = (prescriptions || [])
+                  .filter((rx: Record<string, unknown>) => rx.status === "active")
+                  .flatMap((rx: Record<string, unknown>) => ((rx.medications as Array<{name: string}>) || []).map(m => m.name));
+                const allergyConflicts = allergyText
+                  ? activeRxMeds.filter(med => {
+                      const medLower = med.toLowerCase();
+                      return allergyText.includes(medLower) || allergyText.split(/[,;/]+/).some(a => {
+                        const trimmed = a.trim();
+                        return trimmed && (medLower.includes(trimmed) || trimmed.includes(medLower));
+                      });
+                    })
+                  : [];
+                return allergyConflicts.length > 0 ? (
+                  <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-5">
+                    <h3 className="font-display font-bold text-lg text-red-800 flex items-center gap-2 mb-3">
+                      <ShieldAlert className="w-5 h-5" /> Drug Allergy Alert
+                    </h3>
+                    <div className="space-y-2">
+                      {allergyConflicts.map((med, i) => (
+                        <div key={i} className="flex items-start gap-2 text-sm text-red-800">
+                          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                          <span>Patient has a recorded allergy that may conflict with active medication: <b>{med}</b></span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
               {overviewInteractions.length > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
                   <h3 className="font-display font-bold text-lg text-red-700 flex items-center gap-2 mb-3">

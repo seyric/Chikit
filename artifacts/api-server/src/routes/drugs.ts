@@ -44,7 +44,7 @@ router.get("/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/check-interactions", requireAuth, async (req, res) => {
+async function handleInteractionCheck(req: import("express").Request, res: import("express").Response) {
   try {
     const { drugNames } = req.body;
     if (!Array.isArray(drugNames) || drugNames.length < 2) {
@@ -104,6 +104,9 @@ router.post("/check-interactions", requireAuth, async (req, res) => {
     console.error("Interaction check error:", err);
     res.status(500).json({ error: "internal_error", message: "Failed to check interactions" });
   }
-});
+}
+
+router.post("/check-interactions", requireAuth, handleInteractionCheck);
+router.post("/interactions", requireAuth, handleInteractionCheck);
 
 export default router;

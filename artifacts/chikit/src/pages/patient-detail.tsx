@@ -106,6 +106,8 @@ export default function PatientDetail() {
   const [drugs, setDrugs] = useState<DrugEntry[]>([defaultDrug()]);
   const [testOrder, setTestOrder] = useState({ testName: "", type: "lab", indication: "" });
   const [rxInteractions, setRxInteractions] = useState<InteractionAlert[]>([]);
+  const [dismissedAllergyAlert, setDismissedAllergyAlert] = useState(false);
+  const [dismissedInteractionAlert, setDismissedInteractionAlert] = useState(false);
 
   const [savingVisit, setSavingVisit] = useState(false);
   const [visitSaved, setVisitSaved] = useState(false);
@@ -285,8 +287,11 @@ export default function PatientDetail() {
                       });
                     })
                   : [];
-                return allergyConflicts.length > 0 ? (
-                  <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-5">
+                return allergyConflicts.length > 0 && !dismissedAllergyAlert ? (
+                  <div className="bg-red-100 border-2 border-red-300 rounded-2xl p-5 relative">
+                    <button onClick={() => setDismissedAllergyAlert(true)} className="absolute top-3 right-3 p-1.5 hover:bg-red-200 rounded-lg transition" title="Dismiss alert">
+                      <X className="w-4 h-4 text-red-700" />
+                    </button>
                     <h3 className="font-display font-bold text-lg text-red-800 flex items-center gap-2 mb-3">
                       <ShieldAlert className="w-5 h-5" /> Drug Allergy Alert
                     </h3>
@@ -302,8 +307,11 @@ export default function PatientDetail() {
                 ) : null;
               })()}
 
-              {overviewInteractions.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+              {overviewInteractions.length > 0 && !dismissedInteractionAlert && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-5 relative">
+                  <button onClick={() => setDismissedInteractionAlert(true)} className="absolute top-3 right-3 p-1.5 hover:bg-red-100 rounded-lg transition" title="Dismiss alert">
+                    <X className="w-4 h-4 text-red-600" />
+                  </button>
                   <h3 className="font-display font-bold text-lg text-red-700 flex items-center gap-2 mb-3">
                     <AlertTriangle className="w-5 h-5" /> Drug Interaction Alerts
                   </h3>

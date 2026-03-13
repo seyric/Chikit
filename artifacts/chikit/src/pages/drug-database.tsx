@@ -193,7 +193,7 @@ export default function DrugDatabase() {
     queryFn: () => {
       const params = new URLSearchParams();
       if (debouncedSearch) params.set("q", debouncedSearch);
-      params.set("limit", "200");
+      params.set("limit", "500");
       return fetch(`/api/drugs?${params}`).then(r => r.json());
     },
     enabled: !!user,

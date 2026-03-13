@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { drugsTable } from "@workspace/db";
-import { ilike, or, sql, eq } from "drizzle-orm";
+import { ilike, or, sql, eq, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth.js";
 
 const router = Router();
@@ -9,7 +9,7 @@ const router = Router();
 router.get("/", requireAuth, async (req, res) => {
   try {
     const { q, limit: rawLimit } = req.query;
-    const limit = Math.min(Number(rawLimit) || 50, 200);
+    const limit = Math.min(Number(rawLimit) || 50, 500);
 
     if (q && String(q).trim().length > 0) {
       const search = `%${String(q).trim()}%`;
@@ -46,25 +46,40 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 async function handleInteractionCheck(req: import("express").Request, res: import("express").Response) {
   try {
-    const { drugNames } = req.body;
-    if (!Array.isArray(drugNames) || drugNames.length < 2) {
+    const { drugNames, drugIds } = req.body;
+
+    const hasDrugIds = Array.isArray(drugIds) && drugIds.length >= 2;
+    const hasDrugNames = Array.isArray(drugNames) && drugNames.length >= 2;
+
+    if (!hasDrugIds && !hasDrugNames) {
       res.json({ interactions: [] });
       return;
     }
 
-    const normalizedNames = drugNames.map((n: string) => n.toLowerCase().trim());
-
-    const allDrugs = await db.select({
-      id: drugsTable.id,
-      name: drugsTable.name,
-      genericName: drugsTable.genericName,
-      interactions: drugsTable.interactions,
-      contraindications: drugsTable.contraindications,
-    }).from(drugsTable)
-      .where(or(
-        ...normalizedNames.map(n => ilike(drugsTable.name, n)),
-        ...normalizedNames.map(n => ilike(drugsTable.genericName, n)),
-      ));
+    let allDrugs;
+    if (hasDrugIds) {
+      allDrugs = await db.select({
+        id: drugsTable.id,
+        name: drugsTable.name,
+        genericName: drugsTable.genericName,
+        interactions: drugsTable.interactions,
+        contraindications: drugsTable.contraindications,
+      }).from(drugsTable)
+        .where(inArray(drugsTable.id, drugIds.map(Number)));
+    } else {
+      const normalizedNames = drugNames.map((n: string) => n.toLowerCase().trim());
+      allDrugs = await db.select({
+        id: drugsTable.id,
+        name: drugsTable.name,
+        genericName: drugsTable.genericName,
+        interactions: drugsTable.interactions,
+        contraindications: drugsTable.contraindications,
+      }).from(drugsTable)
+        .where(or(
+          ...normalizedNames.map(n => ilike(drugsTable.name, n)),
+          ...normalizedNames.map(n => ilike(drugsTable.genericName, n)),
+        ));
+    }
 
     const foundInteractions: Array<{
       drug1: string;

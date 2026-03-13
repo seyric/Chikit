@@ -1,0 +1,211 @@
+You are a senior healthcare software architect and full-stack engineer.
+
+Your task is to design and implement a production-grade application called **Chikit**.
+
+Chikit is an **offline-first AI medical assistant and multi-hospital ERP system** designed for doctors, hospitals, and patients, especially in rural environments where internet connectivity may be limited.
+
+The system must be modular, secure, scalable, and able to run AI locally on devices.
+
+Your response must provide **complete architecture, folder structures, code examples, API design, and integration instructions**.
+
+---
+
+## Core Requirements
+
+Chikit must include the following major capabilities:
+
+1. Patient medical record system with lifelong health history
+2. AI-powered clinical decision support using **MedGemma (local runtime)**
+3. Offline-first architecture with sync when internet becomes available
+4. Multi-hospital ERP platform with doctor and department management
+5. Secure encrypted medical records
+6. Clinical documentation automation
+7. Lab report and radiology analysis
+8. Appointment scheduling and patient management
+9. E-prescriptions and printable reports
+10. Role-based access control for doctors, nurses, administrators, and patients
+
+---
+
+## Required Tech Stack
+
+Frontend:
+
+* Flutter (cross-platform: Android, iOS, desktop)
+* State management using Riverpod
+* Local encrypted SQLite database
+* Background sync service
+
+Backend:
+
+* FastAPI (Python)
+* PostgreSQL database
+* Redis for queues and background jobs
+* REST API architecture
+* Microservice-ready design
+
+AI Layer:
+
+* MedGemma model
+* Run locally using Ollama or ONNX Runtime
+* Prompt pipeline for clinical reasoning
+* Structured JSON outputs
+* Clinical safety guardrails
+
+Security:
+
+* AES encryption for local data
+* JWT authentication
+* Role-Based Access Control (RBAC)
+* Secure key storage
+* Audit logs for medical access
+
+Sync Engine:
+
+* Change-log based synchronization
+* Conflict resolution system
+* Offline-first data architecture
+* Secure encrypted data sync
+
+---
+
+## System Architecture
+
+Design the system with the following layers:
+
+1. Client Application Layer (Flutter apps)
+2. Local Data Layer (encrypted SQLite)
+3. Sync Layer (background data sync)
+4. Backend API Layer (FastAPI)
+5. AI Inference Layer (MedGemma)
+6. Cloud Infrastructure Layer
+7. Security and Audit Layer
+
+Explain how each layer interacts with the others.
+
+---
+
+## Database Design
+
+Provide schemas for:
+
+Users
+Patients
+Hospitals
+Doctors
+Appointments
+MedicalRecords
+LabReports
+RadiologyReports
+Prescriptions
+AIAnalysisResults
+AuditLogs
+
+Include primary keys, relations, and indexing strategies.
+
+---
+
+## API Design
+
+Define REST API endpoints including:
+
+Auth
+
+* login
+* register
+* token refresh
+
+Patients
+
+* create patient
+* update patient
+* fetch patient timeline
+
+Appointments
+
+* book appointment
+* cancel appointment
+* doctor schedule
+
+Medical Records
+
+* upload report
+* fetch history
+* analyze report
+
+AI
+
+* analyze symptoms
+* summarize patient history
+* interpret lab results
+
+---
+
+## AI Prompt Pipeline
+
+Design the MedGemma prompt architecture used by Chikit.
+
+Include:
+
+system prompt
+context injection
+clinical reasoning
+structured output
+
+Responses must return structured JSON for storage.
+
+---
+
+## Offline-First Data Strategy
+
+Explain how Chikit stores and syncs data using:
+
+local SQLite databases
+change logs
+background sync workers
+conflict resolution
+secure transport encryption
+
+---
+
+## Security Design
+
+Explain security architecture including:
+
+device security layer
+application security layer
+data encryption layer
+secure sync layer
+audit monitoring layer
+
+Include compliance considerations for healthcare data.
+
+---
+
+## Code Examples
+
+Provide examples for:
+
+Flutter patient dashboard screen
+FastAPI endpoint for medical records
+AI inference pipeline for MedGemma
+sync engine logic
+
+---
+
+## Deployment
+
+Explain how to deploy Chikit:
+
+Docker containers
+cloud backend
+hospital local servers
+mobile apps
+
+---
+
+## Final Output Format
+
+Structure your response as a **complete technical blueprint** so a development team could begin building Chikit immediately.
+
+Provide diagrams, folder structures, and implementation notes wherever helpful.

@@ -1,8 +1,8 @@
-# Workspace
+# Chikit - AI Medical ERP
 
 ## Overview
 
-pnpm workspace monorepo using TypeScript. Each package manages its own dependencies.
+Chikit is an offline-first AI medical assistant and multi-hospital ERP system designed for doctors, hospitals, and patients, with focus on rural/limited-connectivity environments.
 
 ## Stack
 
@@ -14,83 +14,96 @@ pnpm workspace monorepo using TypeScript. Each package manages its own dependenc
 - **Database**: PostgreSQL + Drizzle ORM
 - **Validation**: Zod (`zod/v4`), `drizzle-zod`
 - **API codegen**: Orval (from OpenAPI spec)
-- **Build**: esbuild (CJS bundle)
+- **Frontend**: React + Vite + Tailwind CSS + shadcn/ui
+- **Frontend state**: React Query + Context API
+- **Routing**: Wouter
+- **Charts**: Recharts
 
 ## Structure
 
 ```text
 artifacts-monorepo/
-├── artifacts/              # Deployable applications
-│   └── api-server/         # Express API server
-├── lib/                    # Shared libraries
+├── artifacts/
+│   ├── api-server/         # Express API server
+│   └── chikit/             # React + Vite frontend (served at /)
+├── lib/
 │   ├── api-spec/           # OpenAPI spec + Orval codegen config
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-├── scripts/                # Utility scripts (single workspace package)
-│   └── src/                # Individual .ts scripts, run via `pnpm --filter @workspace/scripts run <script>`
-├── pnpm-workspace.yaml     # pnpm workspace (artifacts/*, lib/*, lib/integrations/*, scripts)
-├── tsconfig.base.json      # Shared TS options (composite, bundler resolution, es2022)
-├── tsconfig.json           # Root TS project references
-└── package.json            # Root package with hoisted devDeps
+└── scripts/                # Utility scripts
 ```
 
-## TypeScript & Composite Projects
+## Key Features
 
-Every package extends `tsconfig.base.json` which sets `composite: true`. The root `tsconfig.json` lists all packages as project references. This means:
+1. **Patient Management** - Full CRUD, lifelong medical history, patient timelines
+2. **AI Clinical Decision Support** - Symptom analysis, patient summaries, lab interpretation
+3. **Multi-Hospital ERP** - Hospital and doctor management across facilities
+4. **Medical Records** - Visit records, vital signs, diagnoses, treatment plans
+5. **Lab Reports** - Upload and AI interpretation of laboratory results
+6. **Radiology Reports** - Imaging studies (X-ray, MRI, CT, ultrasound etc.)
+7. **E-Prescriptions** - Digital prescriptions with medication details, printable
+8. **Appointment Scheduling** - Book, manage, and track appointments
+9. **Role-Based Access Control** - Admin, Doctor, Nurse, Patient roles
+10. **Audit Logs** - Complete audit trail of all medical record access
 
-- **Always typecheck from the root** — run `pnpm run typecheck` (which runs `tsc --build --emitDeclarationOnly`). This builds the full dependency graph so that cross-package imports resolve correctly. Running `tsc` inside a single package will fail if its dependencies haven't been built yet.
-- **`emitDeclarationOnly`** — we only emit `.d.ts` files during typecheck; actual JS bundling is handled by esbuild/tsx/vite...etc, not `tsc`.
-- **Project references** — when package A depends on package B, A's `tsconfig.json` must list B in its `references` array. `tsc --build` uses this to determine build order and skip up-to-date packages.
+## Demo Credentials
 
-## Root Scripts
+- **Admin**: admin@chikit.health / admin123
+- **Doctor**: dr.sharma@chikit.health / doctor123
 
-- `pnpm run build` — runs `typecheck` first, then recursively runs `build` in all packages that define it
-- `pnpm run typecheck` — runs `tsc --build --emitDeclarationOnly` using project references
+## API Routes
 
-## Packages
+All routes are under `/api/`:
+- `/auth/login`, `/auth/register`, `/auth/me` - Authentication
+- `/hospitals` - Hospital management
+- `/doctors` - Doctor management
+- `/patients` - Patient management (+ `/patients/:id/timeline`)
+- `/appointments` - Appointment scheduling
+- `/medical-records` - Medical records
+- `/lab-reports` - Lab reports
+- `/radiology-reports` - Radiology
+- `/prescriptions` - E-prescriptions
+- `/ai/analyze-symptoms` - AI symptom analysis
+- `/ai/summarize-patient` - AI patient summary
+- `/ai/interpret-lab` - AI lab interpretation
+- `/ai/results` - AI analysis history
+- `/audit-logs` - Audit trail
+- `/stats/dashboard` - Dashboard statistics
 
-### `artifacts/api-server` (`@workspace/api-server`)
+## Security
 
-Express 5 API server. Routes live in `src/routes/` and use `@workspace/api-zod` for request and response validation and `@workspace/db` for persistence.
+- JWT tokens (base64 + HMAC-SHA256 signature)
+- SHA-256 password hashing with salt
+- All medical record access logged to audit trail
+- Role-based access control enforced at route level
 
-- Entry: `src/index.ts` — reads `PORT`, starts Express
-- App setup: `src/app.ts` — mounts CORS, JSON/urlencoded parsing, routes at `/api`
-- Routes: `src/routes/index.ts` mounts sub-routers; `src/routes/health.ts` exposes `GET /health` (full path: `/api/health`)
-- Depends on: `@workspace/db`, `@workspace/api-zod`
-- `pnpm --filter @workspace/api-server run dev` — run the dev server
-- `pnpm --filter @workspace/api-server run build` — production esbuild bundle (`dist/index.cjs`)
-- Build bundles an allowlist of deps (express, cors, pg, drizzle-orm, zod, etc.) and externalizes the rest
+## Database Tables
 
-### `lib/db` (`@workspace/db`)
+- `users` - System users with roles
+- `hospitals` - Hospital facilities
+- `doctors` - Doctor profiles linked to users + hospitals
+- `patients` - Patient registry with medical info
+- `appointments` - Appointment scheduling
+- `medical_records` - Clinical visit records
+- `lab_reports` - Laboratory test results
+- `radiology_reports` - Imaging studies
+- `prescriptions` - E-prescriptions with medications
+- `ai_analysis_results` - AI decision support results
+- `audit_logs` - Full audit trail
 
-Database layer using Drizzle ORM with PostgreSQL. Exports a Drizzle client instance and schema models.
+## Development
 
-- `src/index.ts` — creates a `Pool` + Drizzle instance, exports schema
-- `src/schema/index.ts` — barrel re-export of all models
-- `src/schema/<modelname>.ts` — table definitions with `drizzle-zod` insert schemas (no models definitions exist right now)
-- `drizzle.config.ts` — Drizzle Kit config (requires `DATABASE_URL`, automatically provided by Replit)
-- Exports: `.` (pool, db, schema), `./schema` (schema only)
+```bash
+# Run API server
+pnpm --filter @workspace/api-server run dev
 
-Production migrations are handled by Replit when publishing. In development, we just use `pnpm --filter @workspace/db run push`, and we fallback to `pnpm --filter @workspace/db run push-force`.
+# Run frontend
+pnpm --filter @workspace/chikit run dev
 
-### `lib/api-spec` (`@workspace/api-spec`)
+# Push DB schema changes
+pnpm --filter @workspace/db run push
 
-Owns the OpenAPI 3.1 spec (`openapi.yaml`) and the Orval config (`orval.config.ts`). Running codegen produces output into two sibling packages:
-
-1. `lib/api-client-react/src/generated/` — React Query hooks + fetch client
-2. `lib/api-zod/src/generated/` — Zod schemas
-
-Run codegen: `pnpm --filter @workspace/api-spec run codegen`
-
-### `lib/api-zod` (`@workspace/api-zod`)
-
-Generated Zod schemas from the OpenAPI spec (e.g. `HealthCheckResponse`). Used by `api-server` for response validation.
-
-### `lib/api-client-react` (`@workspace/api-client-react`)
-
-Generated React Query hooks and fetch client from the OpenAPI spec (e.g. `useHealthCheck`, `healthCheck`).
-
-### `scripts` (`@workspace/scripts`)
-
-Utility scripts package. Each script is a `.ts` file in `src/` with a corresponding npm script in `package.json`. Run scripts via `pnpm --filter @workspace/scripts run <script>`. Scripts can import any workspace package (e.g., `@workspace/db`) by adding it as a dependency in `scripts/package.json`.
+# Regenerate API client from OpenAPI spec
+pnpm --filter @workspace/api-spec run codegen
+```

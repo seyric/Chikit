@@ -1,22 +1,45 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: Chikit - AI Medical ERP API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication
+  - name: users
+    description: User management
+  - name: hospitals
+    description: Hospital management
+  - name: doctors
+    description: Doctor management
+  - name: patients
+    description: Patient management
+  - name: appointments
+    description: Appointment scheduling
+  - name: medical-records
+    description: Medical records
+  - name: lab-reports
+    description: Lab reports
+  - name: radiology
+    description: Radiology reports
+  - name: prescriptions
+    description: E-prescriptions
+  - name: ai
+    description: AI clinical decision support
+  - name: audit
+    description: Audit logs
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +47,772 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /hospitals:
+    get:
+      operationId: listHospitals
+      tags: [hospitals]
+      summary: List hospitals
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: List of hospitals
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Hospital"
+    post:
+      operationId: createHospital
+      tags: [hospitals]
+      summary: Create hospital
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateHospitalRequest"
+      responses:
+        "201":
+          description: Hospital created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hospital"
+
+  /hospitals/{id}:
+    get:
+      operationId: getHospital
+      tags: [hospitals]
+      summary: Get hospital
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Hospital details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Hospital"
+
+  /doctors:
+    get:
+      operationId: listDoctors
+      tags: [doctors]
+      summary: List doctors
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: hospitalId
+          in: query
+          schema:
+            type: integer
+        - name: specialization
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of doctors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Doctor"
+    post:
+      operationId: createDoctor
+      tags: [doctors]
+      summary: Create doctor profile
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateDoctorRequest"
+      responses:
+        "201":
+          description: Doctor created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+
+  /doctors/{id}:
+    get:
+      operationId: getDoctor
+      tags: [doctors]
+      summary: Get doctor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Doctor details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Doctor"
+
+  /patients:
+    get:
+      operationId: listPatients
+      tags: [patients]
+      summary: List patients
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: search
+          in: query
+          schema:
+            type: string
+        - name: hospitalId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of patients
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Patient"
+    post:
+      operationId: createPatient
+      tags: [patients]
+      summary: Create patient
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePatientRequest"
+      responses:
+        "201":
+          description: Patient created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients/{id}:
+    get:
+      operationId: getPatient
+      tags: [patients]
+      summary: Get patient
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patient details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+    put:
+      operationId: updatePatient
+      tags: [patients]
+      summary: Update patient
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePatientRequest"
+      responses:
+        "200":
+          description: Patient updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Patient"
+
+  /patients/{id}/timeline:
+    get:
+      operationId: getPatientTimeline
+      tags: [patients]
+      summary: Get patient medical timeline
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Patient timeline
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PatientTimeline"
+
+  /appointments:
+    get:
+      operationId: listAppointments
+      tags: [appointments]
+      summary: List appointments
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: doctorId
+          in: query
+          schema:
+            type: integer
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of appointments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Appointment"
+    post:
+      operationId: createAppointment
+      tags: [appointments]
+      summary: Book appointment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateAppointmentRequest"
+      responses:
+        "201":
+          description: Appointment booked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /appointments/{id}:
+    get:
+      operationId: getAppointment
+      tags: [appointments]
+      summary: Get appointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Appointment details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+    put:
+      operationId: updateAppointment
+      tags: [appointments]
+      summary: Update/cancel appointment
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateAppointmentRequest"
+      responses:
+        "200":
+          description: Appointment updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Appointment"
+
+  /medical-records:
+    get:
+      operationId: listMedicalRecords
+      tags: [medical-records]
+      summary: List medical records
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+        - name: doctorId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of medical records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MedicalRecord"
+    post:
+      operationId: createMedicalRecord
+      tags: [medical-records]
+      summary: Create medical record
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMedicalRecordRequest"
+      responses:
+        "201":
+          description: Medical record created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalRecord"
+
+  /medical-records/{id}:
+    get:
+      operationId: getMedicalRecord
+      tags: [medical-records]
+      summary: Get medical record
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Medical record details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MedicalRecord"
+
+  /lab-reports:
+    get:
+      operationId: listLabReports
+      tags: [lab-reports]
+      summary: List lab reports
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of lab reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LabReport"
+    post:
+      operationId: createLabReport
+      tags: [lab-reports]
+      summary: Upload lab report
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateLabReportRequest"
+      responses:
+        "201":
+          description: Lab report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabReport"
+
+  /lab-reports/{id}:
+    get:
+      operationId: getLabReport
+      tags: [lab-reports]
+      summary: Get lab report
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Lab report details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LabReport"
+
+  /radiology-reports:
+    get:
+      operationId: listRadiologyReports
+      tags: [radiology]
+      summary: List radiology reports
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of radiology reports
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RadiologyReport"
+    post:
+      operationId: createRadiologyReport
+      tags: [radiology]
+      summary: Upload radiology report
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRadiologyReportRequest"
+      responses:
+        "201":
+          description: Radiology report created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RadiologyReport"
+
+  /prescriptions:
+    get:
+      operationId: listPrescriptions
+      tags: [prescriptions]
+      summary: List prescriptions
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+        - name: doctorId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of prescriptions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Prescription"
+    post:
+      operationId: createPrescription
+      tags: [prescriptions]
+      summary: Create e-prescription
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePrescriptionRequest"
+      responses:
+        "201":
+          description: Prescription created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+
+  /prescriptions/{id}:
+    get:
+      operationId: getPrescription
+      tags: [prescriptions]
+      summary: Get prescription
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Prescription details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Prescription"
+
+  /ai/analyze-symptoms:
+    post:
+      operationId: analyzeSymptoms
+      tags: [ai]
+      summary: AI symptom analysis
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AnalyzeSymptomsRequest"
+      responses:
+        "200":
+          description: AI analysis result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAnalysisResult"
+
+  /ai/summarize-patient:
+    post:
+      operationId: summarizePatient
+      tags: [ai]
+      summary: AI patient history summary
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SummarizePatientRequest"
+      responses:
+        "200":
+          description: AI summary result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAnalysisResult"
+
+  /ai/interpret-lab:
+    post:
+      operationId: interpretLabResults
+      tags: [ai]
+      summary: AI lab results interpretation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterpretLabRequest"
+      responses:
+        "200":
+          description: AI interpretation result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiAnalysisResult"
+
+  /ai/results:
+    get:
+      operationId: listAiResults
+      tags: [ai]
+      summary: List AI analysis results
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: AI results
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AiAnalysisResult"
+
+  /audit-logs:
+    get:
+      operationId: listAuditLogs
+      tags: [audit]
+      summary: List audit logs
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+        - name: patientId
+          in: query
+          schema:
+            type: integer
+        - name: limit
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Audit logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AuditLog"
+
+  /stats/dashboard:
+    get:
+      operationId: getDashboardStats
+      tags: [health]
+      summary: Get dashboard statistics
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   schemas:
     HealthStatus:
       type: object
@@ -34,3 +822,921 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+        - message
+
+    LoginRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    RegisterRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, doctor, nurse, patient]
+        hospitalId:
+          type: integer
+      required:
+        - email
+        - password
+        - name
+        - role
+
+    AuthResponse:
+      type: object
+      properties:
+        token:
+          type: string
+        user:
+          $ref: "#/components/schemas/User"
+      required:
+        - token
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        email:
+          type: string
+        name:
+          type: string
+        role:
+          type: string
+          enum: [admin, doctor, nurse, patient]
+        hospitalId:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - email
+        - name
+        - role
+        - isActive
+        - createdAt
+
+    Hospital:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        type:
+          type: string
+          enum: [general, specialty, clinic, rural]
+        bedCount:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - address
+        - city
+        - state
+        - type
+        - isActive
+        - createdAt
+
+    CreateHospitalRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        address:
+          type: string
+        city:
+          type: string
+        state:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        type:
+          type: string
+          enum: [general, specialty, clinic, rural]
+        bedCount:
+          type: integer
+      required:
+        - name
+        - address
+        - city
+        - state
+        - type
+
+    Doctor:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        hospitalId:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        specialization:
+          type: string
+        department:
+          type: string
+        licenseNumber:
+          type: string
+        phone:
+          type: string
+        isAvailable:
+          type: boolean
+        hospitalName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - hospitalId
+        - name
+        - specialization
+        - department
+        - isAvailable
+        - createdAt
+
+    CreateDoctorRequest:
+      type: object
+      properties:
+        userId:
+          type: integer
+        hospitalId:
+          type: integer
+        specialization:
+          type: string
+        department:
+          type: string
+        licenseNumber:
+          type: string
+        phone:
+          type: string
+      required:
+        - hospitalId
+        - specialization
+        - department
+
+    Patient:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientCode:
+          type: string
+        name:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+          enum: [male, female, other]
+        bloodGroup:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        emergencyContact:
+          type: string
+        emergencyPhone:
+          type: string
+        allergies:
+          type: string
+        chronicConditions:
+          type: string
+        hospitalId:
+          type: integer
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientCode
+        - name
+        - dateOfBirth
+        - gender
+        - isActive
+        - createdAt
+
+    CreatePatientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        dateOfBirth:
+          type: string
+        gender:
+          type: string
+          enum: [male, female, other]
+        bloodGroup:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        emergencyContact:
+          type: string
+        emergencyPhone:
+          type: string
+        allergies:
+          type: string
+        chronicConditions:
+          type: string
+        hospitalId:
+          type: integer
+      required:
+        - name
+        - dateOfBirth
+        - gender
+
+    UpdatePatientRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        phone:
+          type: string
+        email:
+          type: string
+        address:
+          type: string
+        emergencyContact:
+          type: string
+        emergencyPhone:
+          type: string
+        allergies:
+          type: string
+        chronicConditions:
+          type: string
+        bloodGroup:
+          type: string
+
+    PatientTimeline:
+      type: object
+      properties:
+        patient:
+          $ref: "#/components/schemas/Patient"
+        medicalRecords:
+          type: array
+          items:
+            $ref: "#/components/schemas/MedicalRecord"
+        labReports:
+          type: array
+          items:
+            $ref: "#/components/schemas/LabReport"
+        radiologyReports:
+          type: array
+          items:
+            $ref: "#/components/schemas/RadiologyReport"
+        prescriptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Prescription"
+        appointments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Appointment"
+        aiAnalyses:
+          type: array
+          items:
+            $ref: "#/components/schemas/AiAnalysisResult"
+      required:
+        - patient
+        - medicalRecords
+        - labReports
+        - radiologyReports
+        - prescriptions
+        - appointments
+        - aiAnalyses
+
+    Appointment:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        appointmentDate:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+          description: Duration in minutes
+        reason:
+          type: string
+        status:
+          type: string
+          enum: [scheduled, confirmed, in_progress, completed, cancelled, no_show]
+        notes:
+          type: string
+        patientName:
+          type: string
+        doctorName:
+          type: string
+        hospitalName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - doctorId
+        - hospitalId
+        - appointmentDate
+        - status
+        - createdAt
+
+    CreateAppointmentRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        appointmentDate:
+          type: string
+          format: date-time
+        duration:
+          type: integer
+        reason:
+          type: string
+        notes:
+          type: string
+      required:
+        - patientId
+        - doctorId
+        - hospitalId
+        - appointmentDate
+
+    UpdateAppointmentRequest:
+      type: object
+      properties:
+        appointmentDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [scheduled, confirmed, in_progress, completed, cancelled, no_show]
+        notes:
+          type: string
+        reason:
+          type: string
+
+    MedicalRecord:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        visitDate:
+          type: string
+          format: date-time
+        chiefComplaint:
+          type: string
+        diagnosis:
+          type: string
+        symptoms:
+          type: string
+        vitalSigns:
+          type: object
+          properties:
+            bloodPressure:
+              type: string
+            heartRate:
+              type: integer
+            temperature:
+              type: number
+            respiratoryRate:
+              type: integer
+            oxygenSaturation:
+              type: number
+            weight:
+              type: number
+            height:
+              type: number
+        treatmentPlan:
+          type: string
+        notes:
+          type: string
+        followUpDate:
+          type: string
+        patientName:
+          type: string
+        doctorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - doctorId
+        - hospitalId
+        - visitDate
+        - chiefComplaint
+        - createdAt
+
+    CreateMedicalRecordRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        visitDate:
+          type: string
+          format: date-time
+        chiefComplaint:
+          type: string
+        diagnosis:
+          type: string
+        symptoms:
+          type: string
+        vitalSigns:
+          type: object
+          properties:
+            bloodPressure:
+              type: string
+            heartRate:
+              type: integer
+            temperature:
+              type: number
+            respiratoryRate:
+              type: integer
+            oxygenSaturation:
+              type: number
+            weight:
+              type: number
+            height:
+              type: number
+        treatmentPlan:
+          type: string
+        notes:
+          type: string
+        followUpDate:
+          type: string
+      required:
+        - patientId
+        - doctorId
+        - hospitalId
+        - chiefComplaint
+
+    LabReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        testName:
+          type: string
+        testDate:
+          type: string
+          format: date-time
+        results:
+          type: object
+          additionalProperties: true
+        referenceRanges:
+          type: object
+          additionalProperties: true
+        interpretation:
+          type: string
+        status:
+          type: string
+          enum: [pending, completed, reviewed]
+        aiInterpretation:
+          type: string
+        patientName:
+          type: string
+        doctorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - doctorId
+        - hospitalId
+        - testName
+        - testDate
+        - status
+        - createdAt
+
+    CreateLabReportRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        testName:
+          type: string
+        testDate:
+          type: string
+          format: date-time
+        results:
+          type: object
+          additionalProperties: true
+        referenceRanges:
+          type: object
+          additionalProperties: true
+        interpretation:
+          type: string
+      required:
+        - patientId
+        - doctorId
+        - hospitalId
+        - testName
+        - testDate
+
+    RadiologyReport:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        imagingType:
+          type: string
+          enum: [xray, mri, ct_scan, ultrasound, ecg, pet_scan]
+        bodyPart:
+          type: string
+        studyDate:
+          type: string
+          format: date-time
+        findings:
+          type: string
+        impression:
+          type: string
+        radiologistNotes:
+          type: string
+        aiFindings:
+          type: string
+        status:
+          type: string
+          enum: [pending, reported, reviewed]
+        patientName:
+          type: string
+        doctorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - doctorId
+        - hospitalId
+        - imagingType
+        - bodyPart
+        - studyDate
+        - status
+        - createdAt
+
+    CreateRadiologyReportRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        imagingType:
+          type: string
+          enum: [xray, mri, ct_scan, ultrasound, ecg, pet_scan]
+        bodyPart:
+          type: string
+        studyDate:
+          type: string
+          format: date-time
+        findings:
+          type: string
+        impression:
+          type: string
+        radiologistNotes:
+          type: string
+      required:
+        - patientId
+        - doctorId
+        - hospitalId
+        - imagingType
+        - bodyPart
+        - studyDate
+
+    Prescription:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        prescriptionDate:
+          type: string
+          format: date-time
+        diagnosis:
+          type: string
+        medications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Medication"
+        instructions:
+          type: string
+        followUpDays:
+          type: integer
+        status:
+          type: string
+          enum: [active, dispensed, expired, cancelled]
+        patientName:
+          type: string
+        doctorName:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - doctorId
+        - hospitalId
+        - prescriptionDate
+        - medications
+        - status
+        - createdAt
+
+    Medication:
+      type: object
+      properties:
+        name:
+          type: string
+        dosage:
+          type: string
+        frequency:
+          type: string
+        duration:
+          type: string
+        route:
+          type: string
+        instructions:
+          type: string
+      required:
+        - name
+        - dosage
+        - frequency
+        - duration
+
+    CreatePrescriptionRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        doctorId:
+          type: integer
+        hospitalId:
+          type: integer
+        diagnosis:
+          type: string
+        medications:
+          type: array
+          items:
+            $ref: "#/components/schemas/Medication"
+        instructions:
+          type: string
+        followUpDays:
+          type: integer
+      required:
+        - patientId
+        - doctorId
+        - hospitalId
+        - medications
+
+    AnalyzeSymptomsRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        symptoms:
+          type: array
+          items:
+            type: string
+        duration:
+          type: string
+        severity:
+          type: string
+          enum: [mild, moderate, severe]
+        additionalContext:
+          type: string
+      required:
+        - patientId
+        - symptoms
+
+    SummarizePatientRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        includeRecentOnly:
+          type: boolean
+      required:
+        - patientId
+
+    InterpretLabRequest:
+      type: object
+      properties:
+        patientId:
+          type: integer
+        labReportId:
+          type: integer
+        results:
+          type: object
+          additionalProperties: true
+        patientContext:
+          type: string
+      required:
+        - patientId
+        - labReportId
+
+    AiAnalysisResult:
+      type: object
+      properties:
+        id:
+          type: integer
+        patientId:
+          type: integer
+        analysisType:
+          type: string
+          enum: [symptom_analysis, patient_summary, lab_interpretation, radiology_analysis]
+        inputData:
+          type: object
+          additionalProperties: true
+        findings:
+          type: array
+          items:
+            type: string
+        differentialDiagnosis:
+          type: array
+          items:
+            type: string
+        recommendations:
+          type: array
+          items:
+            type: string
+        urgencyLevel:
+          type: string
+          enum: [low, medium, high, critical]
+        summary:
+          type: string
+        disclaimer:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - patientId
+        - analysisType
+        - findings
+        - recommendations
+        - urgencyLevel
+        - summary
+        - disclaimer
+        - createdAt
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        action:
+          type: string
+        resourceType:
+          type: string
+        resourceId:
+          type: integer
+        details:
+          type: string
+        ipAddress:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - userId
+        - action
+        - resourceType
+        - createdAt
+
+    DashboardStats:
+      type: object
+      properties:
+        totalPatients:
+          type: integer
+        totalDoctors:
+          type: integer
+        totalHospitals:
+          type: integer
+        todayAppointments:
+          type: integer
+        pendingLabReports:
+          type: integer
+        recentMedicalRecords:
+          type: integer
+        aiAnalysesToday:
+          type: integer
+      required:
+        - totalPatients
+        - totalDoctors
+        - totalHospitals
+        - todayAppointments
+        - pendingLabReports
+        - recentMedicalRecords
+        - aiAnalysesToday

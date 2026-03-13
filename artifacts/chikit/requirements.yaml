@@ -1,0 +1,19 @@
+packages:
+  "framer-motion": "For page transitions, list animations, and polished interactions"
+  "lucide-react": "For crisp, beautiful medical and UI icons"
+  "date-fns": "For formatting medical timestamps and appointment dates"
+  "clsx": "For conditional tailwind classes"
+  "tailwind-merge": "For merging tailwind classes safely"
+  "recharts": "For dashboard medical statistics visualizations"
+
+images:
+  - path: "artifacts/chikit/public/images/auth-bg.png"
+    description: "Abstract, modern medical technology background in soft blue and white hues, clean and trustworthy, representing AI healthcare"
+    aspect_ratio: "9:16"
+  - path: "artifacts/chikit/public/images/logo.png"
+    description: "Minimalist, premium logo mark for a healthcare AI system called 'Chikit', utilizing a stylized stethoscope or cross integrated with an AI brain circuit, soft medical blue colors"
+    aspect_ratio: "1:1"
+
+notes:
+  - Intercepting window.fetch to automatically append Bearer token to all requests from generated API client.
+  - Assuming standard Shadcn UI components are pre-generated in src/components/ui/

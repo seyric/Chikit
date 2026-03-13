@@ -22,6 +22,9 @@ import Radiology from "@/pages/radiology";
 import Pharmacy from "@/pages/pharmacy";
 import Ward from "@/pages/ward";
 import DrugDatabase from "@/pages/drug-database";
+import StaffManagement from "@/pages/staff-management";
+import Reports from "@/pages/reports";
+import Billing from "@/pages/billing";
 
 const queryClient = new QueryClient();
 
@@ -74,6 +77,9 @@ function Router() {
       <Route path="/pharmacy">{() => <ProtectedRoute component={Pharmacy} />}</Route>
       <Route path="/ward">{() => <ProtectedRoute component={Ward} />}</Route>
       <Route path="/drug-database">{() => <ProtectedRoute component={DrugDatabase} />}</Route>
+      <Route path="/staff-management">{() => <ProtectedRoute component={StaffManagement} />}</Route>
+      <Route path="/reports">{() => <ProtectedRoute component={Reports} />}</Route>
+      <Route path="/billing">{() => <ProtectedRoute component={Billing} />}</Route>
 
       <Route component={NotFound} />
     </Switch>

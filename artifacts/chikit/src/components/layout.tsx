@@ -5,7 +5,7 @@ import {
   Activity, Calendar, Users, Building, FileText,
   Pill, LayoutDashboard, BrainCircuit, ShieldAlert, LogOut,
   TestTube, FlaskConical, UserCheck, Stethoscope, Heart,
-  BedDouble, ScanLine, Database
+  BedDouble, ScanLine, Database, Shield, BarChart3, Receipt
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -99,6 +99,9 @@ const getNavItems = (role?: string) => {
       { name: "AI Assistant", href: "/ai-assistant", icon: BrainCircuit, highlight: true },
       { name: "Doctors", href: "/doctors", icon: Stethoscope },
       { name: "Hospitals", href: "/hospitals", icon: Building },
+      { name: "Staff Management", href: "/staff-management", icon: Shield },
+      { name: "Reports", href: "/reports", icon: BarChart3 },
+      { name: "Billing", href: "/billing", icon: Receipt },
       { name: "Audit Logs", href: "/audit-logs", icon: ShieldAlert },
     ];
   }

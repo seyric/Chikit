@@ -67,6 +67,26 @@ artifacts-monorepo/
 3. **Patient Overview Alerts** — Active prescription drug interactions shown as red alert banner
 4. **Drug Allergy Alerts** — Patient overview checks active medications against recorded allergies, shows red alert banner for conflicts
 
+### Task #5 — Staff Management, Reports & Billing (DONE)
+1. **Staff Management** — Admin-only page at `/staff-management`
+   - List/search/filter staff by role, paginated
+   - Add new staff with role assignment
+   - Activate/deactivate staff members
+   - API: `GET/POST /api/staff`, `PATCH /api/staff/:id`
+2. **Reports & Analytics** — 4 interactive Recharts charts at `/reports`
+   - Patient registrations (area chart, configurable 7/14/30 day range)
+   - Doctor workload (horizontal bar chart, 30-day window)
+   - Lab tests distribution (pie chart)
+   - Prescriptions trend (line chart)
+   - API: `GET /api/stats/daily-patients`, `/doctor-workload`, `/lab-tests-by-type`, `/prescriptions-trend`
+3. **Billing & Invoices** — Full invoice CRUD at `/billing`
+   - Create invoices with line items (description, qty, rate), tax, discount
+   - Auto-calculated subtotal/total, INV-YYYYMM-XXXXX format
+   - Status management (unpaid/partial/paid), mark paid/partial
+   - Filter by status, invoice detail view with line item breakdown
+   - Indian Rupee currency display
+   - API: `GET/POST /api/billing`, `PATCH /api/billing/:id`
+
 ## Demo Credentials
 
 - **Admin**: admin@chikit.health / admin123
@@ -99,6 +119,12 @@ All routes are under `/api/`:
 - `/drugs/:id` — Drug detail by ID (GET)
 - `/drugs/check-interactions` — Drug interaction check (POST, body: { drugNames: string[] })
 - `/drugs/interactions` — Drug interaction check alias (POST, body: { drugNames: string[] })
+- `/staff` — Staff management (GET list, POST create, PATCH /:id update)
+- `/billing` — Billing invoices (GET list, POST create, PATCH /:id update status)
+- `/stats/daily-patients` — Patient registration trend (GET, ?days=7)
+- `/stats/doctor-workload` — Doctor appointment workload (GET)
+- `/stats/lab-tests-by-type` — Lab test distribution (GET)
+- `/stats/prescriptions-trend` — Prescription trend (GET, ?days=7)
 
 ## Security
 
@@ -124,6 +150,7 @@ All routes are under `/api/`:
 - `otp_codes` — OTP verification codes
 - `consent_requests` — Cross-hospital consent requests (patientId, requestingDoctorId, status, expiresAt)
 - `drugs` — Drug database (143 Indian medicines: name, genericName, brandNames, drugClass, strength, interactions, contraindications, sideEffects, pregnancyRisk)
+- `billing` — Billing invoices (patientId, hospitalId, createdBy, invoiceNumber, lineItems JSONB, subtotal, tax, discount, total, status, paidAmount)
 
 ## Important Notes
 

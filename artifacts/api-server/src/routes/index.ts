@@ -14,6 +14,8 @@ import auditRouter from "./audit.js";
 import statsRouter from "./stats.js";
 import consentRequestsRouter from "./consent-requests.js";
 import drugsRouter from "./drugs.js";
+import staffRouter from "./staff.js";
+import billingRouter from "./billing.js";
 
 const router: IRouter = Router();
 
@@ -32,5 +34,7 @@ router.use("/audit-logs", auditRouter);
 router.use("/stats", statsRouter);
 router.use("/consent-requests", consentRequestsRouter);
 router.use("/drugs", drugsRouter);
+router.use("/staff", staffRouter);
+router.use("/billing", billingRouter);
 
 export default router;

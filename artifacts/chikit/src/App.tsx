@@ -16,10 +16,15 @@ import AiAssistant from "@/pages/ai-assistant";
 import PatientPortal from "@/pages/patient-portal";
 import HospitalDirectory from "@/pages/hospital-directory";
 import RegisterPatient from "@/pages/register-patient";
+import Receptionist from "@/pages/receptionist";
+import Labs from "@/pages/labs";
+import Radiology from "@/pages/radiology";
+import Pharmacy from "@/pages/pharmacy";
+import Ward from "@/pages/ward";
 
 const queryClient = new QueryClient();
 
-function ProtectedRoute({ component: Component, ...rest }: { component: any; [key: string]: any }) {
+function ProtectedRoute({ component: Component, ...rest }: { component: React.ComponentType<object>; [key: string]: unknown }) {
   const { user, isLoading } = useAuth();
 
   if (isLoading) {
@@ -47,11 +52,11 @@ function Router() {
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
 
-      {/* Patient Portal — standalone layout, no staff sidebar */}
+      {/* Patient Portal — standalone layout */}
       <Route path="/patient-portal" component={PatientPortal} />
       <Route path="/patient-portal/:rest*" component={PatientPortal} />
 
-      {/* Staff Portal */}
+      {/* Staff Portal — role-specific dashboards */}
       <Route path="/">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
       <Route path="/patients">{() => <ProtectedRoute component={Patients} />}</Route>
@@ -60,6 +65,13 @@ function Router() {
       <Route path="/appointments">{() => <ProtectedRoute component={Appointments} />}</Route>
       <Route path="/ai-assistant">{() => <ProtectedRoute component={AiAssistant} />}</Route>
       <Route path="/hospitals">{() => <ProtectedRoute component={HospitalDirectory} />}</Route>
+
+      {/* Role-specific pages */}
+      <Route path="/receptionist">{() => <ProtectedRoute component={Receptionist} />}</Route>
+      <Route path="/labs">{() => <ProtectedRoute component={Labs} />}</Route>
+      <Route path="/radiology">{() => <ProtectedRoute component={Radiology} />}</Route>
+      <Route path="/pharmacy">{() => <ProtectedRoute component={Pharmacy} />}</Route>
+      <Route path="/ward">{() => <ProtectedRoute component={Ward} />}</Route>
 
       <Route component={NotFound} />
     </Switch>

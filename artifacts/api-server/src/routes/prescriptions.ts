@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { prescriptionsTable, patientsTable, doctorsTable, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth.js";
 import { createAuditLog } from "../lib/audit.js";
 
@@ -21,7 +21,16 @@ const withNames = () => db.select({
 
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const prescriptions = await withNames();
+    const { status, patientId } = req.query;
+    let query = withNames();
+    if (status && patientId) {
+      query = query.where(and(eq(prescriptionsTable.status, String(status)), eq(prescriptionsTable.patientId, Number(patientId))));
+    } else if (status) {
+      query = query.where(eq(prescriptionsTable.status, String(status)));
+    } else if (patientId) {
+      query = query.where(eq(prescriptionsTable.patientId, Number(patientId)));
+    }
+    const prescriptions = await query;
     res.json(prescriptions);
   } catch {
     res.status(500).json({ error: "internal_error", message: "Failed to fetch prescriptions" });
@@ -48,6 +57,22 @@ router.get("/:id", requireAuth, async (req, res) => {
     res.json(prescription);
   } catch {
     res.status(500).json({ error: "internal_error", message: "Failed to fetch prescription" });
+  }
+});
+
+router.patch("/:id", requireAuth, async (req, res) => {
+  try {
+    const { status, medications, instructions, diagnosis } = req.body;
+    const updates: Record<string, unknown> = {};
+    if (status) updates.status = status;
+    if (medications !== undefined) updates.medications = medications;
+    if (instructions !== undefined) updates.instructions = instructions;
+    if (diagnosis !== undefined) updates.diagnosis = diagnosis;
+    const [prescription] = await db.update(prescriptionsTable).set(updates).where(eq(prescriptionsTable.id, Number(req.params.id))).returning();
+    await createAuditLog(req, "update", "prescription", prescription.id, `Status: ${status}`);
+    res.json({ ...prescription, patientName: null, doctorName: null });
+  } catch {
+    res.status(500).json({ error: "internal_error", message: "Failed to update prescription" });
   }
 });
 

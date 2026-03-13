@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { labReportsTable, patientsTable, doctorsTable, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth.js";
 import { createAuditLog } from "../lib/audit.js";
 
@@ -21,7 +21,16 @@ const withNames = () => db.select({
 
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const reports = await withNames();
+    const { status, patientId } = req.query;
+    let query = withNames();
+    if (status && patientId) {
+      query = query.where(and(eq(labReportsTable.status, String(status)), eq(labReportsTable.patientId, Number(patientId))));
+    } else if (status) {
+      query = query.where(eq(labReportsTable.status, String(status)));
+    } else if (patientId) {
+      query = query.where(eq(labReportsTable.patientId, Number(patientId)));
+    }
+    const reports = await query;
     res.json(reports);
   } catch {
     res.status(500).json({ error: "internal_error", message: "Failed to fetch lab reports" });
@@ -32,7 +41,7 @@ router.post("/", requireAuth, async (req, res) => {
   try {
     const { patientId, doctorId, hospitalId, testName, testDate, results, referenceRanges, interpretation } = req.body;
     const [report] = await db.insert(labReportsTable).values({
-      patientId, doctorId, hospitalId, testName, testDate: new Date(testDate), results, referenceRanges, interpretation,
+      patientId, doctorId, hospitalId, testName, testDate: testDate ? new Date(testDate) : new Date(), results, referenceRanges, interpretation,
     }).returning();
     await createAuditLog(req, "create", "lab_report", report.id);
     res.status(201).json({ ...report, patientName: null, doctorName: null });
@@ -49,6 +58,22 @@ router.get("/:id", requireAuth, async (req, res) => {
     res.json(report);
   } catch {
     res.status(500).json({ error: "internal_error", message: "Failed to fetch lab report" });
+  }
+});
+
+router.patch("/:id", requireAuth, async (req, res) => {
+  try {
+    const { status, results, interpretation, referenceRanges } = req.body;
+    const updates: Record<string, unknown> = {};
+    if (status) updates.status = status;
+    if (results !== undefined) updates.results = results;
+    if (interpretation !== undefined) updates.interpretation = interpretation;
+    if (referenceRanges !== undefined) updates.referenceRanges = referenceRanges;
+    const [report] = await db.update(labReportsTable).set(updates).where(eq(labReportsTable.id, Number(req.params.id))).returning();
+    await createAuditLog(req, "update", "lab_report", report.id, `Status: ${status}`);
+    res.json({ ...report, patientName: null, doctorName: null });
+  } catch {
+    res.status(500).json({ error: "internal_error", message: "Failed to update lab report" });
   }
 });
 

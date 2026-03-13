@@ -6,7 +6,6 @@ import NotFound from "@/pages/not-found";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Layout } from "@/components/layout";
 
-// Pages
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import Dashboard from "@/pages/dashboard";
@@ -14,14 +13,22 @@ import Patients from "@/pages/patients";
 import PatientDetail from "@/pages/patient-detail";
 import Appointments from "@/pages/appointments";
 import AiAssistant from "@/pages/ai-assistant";
+import PatientPortal from "@/pages/patient-portal";
+import HospitalDirectory from "@/pages/hospital-directory";
+import RegisterPatient from "@/pages/register-patient";
 
 const queryClient = new QueryClient();
 
-// Protected Route Wrapper
-function ProtectedRoute({ component: Component, ...rest }: { component: any, [key: string]: any }) {
+function ProtectedRoute({ component: Component, ...rest }: { component: any; [key: string]: any }) {
   const { user, isLoading } = useAuth();
-  
-  if (isLoading) return <div className="h-screen flex items-center justify-center bg-background"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div></div>;
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
   if (!user) {
     window.location.href = "/login";
     return null;
@@ -39,14 +46,21 @@ function Router() {
     <Switch>
       <Route path="/login" component={Login} />
       <Route path="/register" component={Register} />
-      
-      <Route path="/">{(params) => <ProtectedRoute component={Dashboard} />}</Route>
-      <Route path="/dashboard">{(params) => <ProtectedRoute component={Dashboard} />}</Route>
-      <Route path="/patients">{(params) => <ProtectedRoute component={Patients} />}</Route>
-      <Route path="/patients/:id">{(params) => <ProtectedRoute component={PatientDetail} />}</Route>
-      <Route path="/appointments">{(params) => <ProtectedRoute component={Appointments} />}</Route>
-      <Route path="/ai-assistant">{(params) => <ProtectedRoute component={AiAssistant} />}</Route>
-      
+
+      {/* Patient Portal — standalone layout, no staff sidebar */}
+      <Route path="/patient-portal" component={PatientPortal} />
+      <Route path="/patient-portal/:rest*" component={PatientPortal} />
+
+      {/* Staff Portal */}
+      <Route path="/">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/dashboard">{() => <ProtectedRoute component={Dashboard} />}</Route>
+      <Route path="/patients">{() => <ProtectedRoute component={Patients} />}</Route>
+      <Route path="/patients/register">{() => <ProtectedRoute component={RegisterPatient} />}</Route>
+      <Route path="/patients/:id">{() => <ProtectedRoute component={PatientDetail} />}</Route>
+      <Route path="/appointments">{() => <ProtectedRoute component={Appointments} />}</Route>
+      <Route path="/ai-assistant">{() => <ProtectedRoute component={AiAssistant} />}</Route>
+      <Route path="/hospitals">{() => <ProtectedRoute component={HospitalDirectory} />}</Route>
+
       <Route component={NotFound} />
     </Switch>
   );

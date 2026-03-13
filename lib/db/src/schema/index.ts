@@ -9,3 +9,5 @@ export * from "./radiology-reports";
 export * from "./prescriptions";
 export * from "./ai-results";
 export * from "./audit-logs";
+export * from "./otp-codes";
+export * from "./consent-requests";

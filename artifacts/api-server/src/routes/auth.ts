@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { usersTable, otpCodesTable } from "@workspace/db";
+import { eq, and, gt } from "drizzle-orm";
 import { hashPassword, generateToken, requireAuth } from "../lib/auth.js";
 
 const router = Router();
 
+// In-memory OTP store for quick demo (backed by DB for persistence)
 router.post("/login", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -23,7 +24,7 @@ router.post("/login", async (req, res) => {
       return;
     }
     const token = generateToken({ id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId });
-    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, isActive: user.isActive, createdAt: user.createdAt } });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, phone: user.phone, isActive: user.isActive, createdAt: user.createdAt } });
   } catch (err) {
     res.status(500).json({ error: "internal_error", message: "Login failed" });
   }
@@ -31,25 +32,28 @@ router.post("/login", async (req, res) => {
 
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, name, role, hospitalId } = req.body;
-    if (!email || !password || !name || !role) {
+    const { email, password, name, role, hospitalId, phone } = req.body;
+    if (!name || !role) {
       res.status(400).json({ error: "bad_request", message: "Missing required fields" });
       return;
     }
-    const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
-    if (existing) {
-      res.status(409).json({ error: "conflict", message: "Email already registered" });
-      return;
+    if (email) {
+      const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+      if (existing) {
+        res.status(409).json({ error: "conflict", message: "Email already registered" });
+        return;
+      }
     }
     const [user] = await db.insert(usersTable).values({
-      email,
-      passwordHash: hashPassword(password),
+      email: email ?? null,
+      passwordHash: password ? hashPassword(password) : null,
       name,
       role,
       hospitalId: hospitalId ?? null,
+      phone: phone ?? null,
     }).returning();
     const token = generateToken({ id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId });
-    res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, isActive: user.isActive, createdAt: user.createdAt } });
+    res.status(201).json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, phone: user.phone, isActive: user.isActive, createdAt: user.createdAt } });
   } catch (err) {
     res.status(500).json({ error: "internal_error", message: "Registration failed" });
   }
@@ -62,9 +66,117 @@ router.get("/me", requireAuth, async (req, res) => {
       res.status(404).json({ error: "not_found", message: "User not found" });
       return;
     }
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, isActive: user.isActive, createdAt: user.createdAt });
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, phone: user.phone, isActive: user.isActive, createdAt: user.createdAt });
   } catch {
     res.status(500).json({ error: "internal_error", message: "Failed to fetch user" });
+  }
+});
+
+// OTP: Send
+router.post("/send-otp", async (req, res) => {
+  try {
+    const { phone } = req.body;
+    if (!phone || !/^\+?[0-9]{10,15}$/.test(phone.replace(/\s/g, ""))) {
+      res.status(400).json({ error: "bad_request", message: "Valid phone number required" });
+      return;
+    }
+    const code = String(Math.floor(100000 + Math.random() * 900000));
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await db.insert(otpCodesTable).values({ phone, code, expiresAt });
+    // In production: send SMS via Twilio/MSG91. For demo, return OTP in response.
+    res.json({ success: true, message: "OTP sent successfully", _demo_otp: code });
+  } catch (err) {
+    res.status(500).json({ error: "internal_error", message: "Failed to send OTP" });
+  }
+});
+
+// OTP: Verify
+router.post("/verify-otp", async (req, res) => {
+  try {
+    const { phone, code } = req.body;
+    if (!phone || !code) {
+      res.status(400).json({ error: "bad_request", message: "Phone and OTP code required" });
+      return;
+    }
+    const now = new Date();
+    const [otpRecord] = await db
+      .select()
+      .from(otpCodesTable)
+      .where(
+        and(
+          eq(otpCodesTable.phone, phone),
+          eq(otpCodesTable.code, code),
+          gt(otpCodesTable.expiresAt, now)
+        )
+      )
+      .orderBy(otpCodesTable.createdAt)
+      .limit(1);
+
+    if (!otpRecord) {
+      res.status(401).json({ error: "unauthorized", message: "Invalid or expired OTP" });
+      return;
+    }
+
+    // Mark OTP as used
+    await db.update(otpCodesTable).set({ usedAt: now }).where(eq(otpCodesTable.id, otpRecord.id));
+
+    // Find or create user by phone
+    let [user] = await db.select().from(usersTable).where(eq(usersTable.phone, phone));
+    if (!user) {
+      [user] = await db.insert(usersTable).values({
+        name: `Patient ${phone.slice(-4)}`,
+        phone,
+        role: "patient",
+        isActive: true,
+      }).returning();
+    }
+
+    const token = generateToken({ id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, phone: user.phone, isActive: user.isActive, createdAt: user.createdAt } });
+  } catch (err) {
+    res.status(500).json({ error: "internal_error", message: "OTP verification failed" });
+  }
+});
+
+// Google Auth (simulated — in production use Google Identity Services to verify ID token)
+router.post("/google", async (req, res) => {
+  try {
+    const { email, name, googleId } = req.body;
+    if (!email || !name) {
+      res.status(400).json({ error: "bad_request", message: "Google auth data required" });
+      return;
+    }
+    // Find existing user by email or googleId
+    let [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    if (!user && googleId) {
+      const [byGoogleId] = await db.select().from(usersTable).where(eq(usersTable.googleId, googleId));
+      user = byGoogleId;
+    }
+    if (!user) {
+      // Create new patient account via Google
+      [user] = await db.insert(usersTable).values({
+        email,
+        name,
+        googleId: googleId ?? null,
+        role: "patient",
+        isActive: true,
+      }).returning();
+    } else {
+      // Update googleId if not set
+      if (!user.googleId && googleId) {
+        await db.update(usersTable).set({ googleId }).where(eq(usersTable.id, user.id));
+      }
+    }
+
+    if (!user.isActive) {
+      res.status(401).json({ error: "unauthorized", message: "Account deactivated" });
+      return;
+    }
+
+    const token = generateToken({ id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId });
+    res.json({ token, user: { id: user.id, email: user.email, name: user.name, role: user.role, hospitalId: user.hospitalId, phone: user.phone, isActive: user.isActive, createdAt: user.createdAt } });
+  } catch (err) {
+    res.status(500).json({ error: "internal_error", message: "Google auth failed" });
   }
 });
 

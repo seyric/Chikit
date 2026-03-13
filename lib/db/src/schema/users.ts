@@ -4,11 +4,15 @@ import { z } from "zod/v4";
 
 export const usersTable = pgTable("users", {
   id: serial("id").primaryKey(),
-  email: text("email").notNull().unique(),
-  passwordHash: text("password_hash").notNull(),
+  email: text("email").unique(),
+  passwordHash: text("password_hash"),
   name: text("name").notNull(),
-  role: text("role", { enum: ["admin", "doctor", "nurse", "patient"] }).notNull().default("patient"),
+  phone: text("phone"),
+  role: text("role", {
+    enum: ["admin", "doctor", "nurse", "patient", "lab_technician", "pharmacist", "receptionist", "radiology_technician", "government_authority"],
+  }).notNull().default("patient"),
   hospitalId: integer("hospital_id"),
+  googleId: text("google_id"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -12,6 +12,7 @@ import prescriptionsRouter from "./prescriptions.js";
 import aiRouter from "./ai.js";
 import auditRouter from "./audit.js";
 import statsRouter from "./stats.js";
+import consentRequestsRouter from "./consent-requests.js";
 
 const router: IRouter = Router();
 
@@ -28,5 +29,6 @@ router.use("/prescriptions", prescriptionsRouter);
 router.use("/ai", aiRouter);
 router.use("/audit-logs", auditRouter);
 router.use("/stats", statsRouter);
+router.use("/consent-requests", consentRequestsRouter);
 
 export default router;

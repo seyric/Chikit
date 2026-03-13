@@ -75,54 +75,54 @@
   --elevate-1: rgba(0,0,0, .03);
   --elevate-2: rgba(0,0,0, .08);
 
-  /* Calm Medical Blues & Clean Whites */
-  --background: 210 33% 99%;
-  --foreground: 222 47% 11%;
-  
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --ring: 221 83% 53%;
+  /* Medical Green — Light Mode */
+  --background: 138 30% 97%;
+  --foreground: 150 35% 8%;
+
+  --border: 142 22% 87%;
+  --input: 142 22% 87%;
+  --ring: 142 68% 34%;
 
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --card-border: 214 32% 91%;
+  --card-foreground: 150 35% 8%;
+  --card-border: 142 22% 89%;
 
-  /* Dark Professional Sidebar */
-  --sidebar: 222 47% 11%;
-  --sidebar-foreground: 210 40% 98%;
-  --sidebar-border: 215 28% 17%;
-  --sidebar-primary: 221 83% 53%;
-  --sidebar-primary-foreground: 210 40% 98%;
-  --sidebar-accent: 215 28% 17%;
-  --sidebar-accent-foreground: 210 40% 98%;
-  --sidebar-ring: 221 83% 53%;
+  /* Deep Forest Green Sidebar */
+  --sidebar: 152 58% 13%;
+  --sidebar-foreground: 138 28% 90%;
+  --sidebar-border: 152 42% 20%;
+  --sidebar-primary: 142 62% 42%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 152 50% 18%;
+  --sidebar-accent-foreground: 138 28% 90%;
+  --sidebar-ring: 142 62% 48%;
 
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
-  --popover-border: 214 32% 91%;
+  --popover-foreground: 150 35% 8%;
+  --popover-border: 142 22% 87%;
 
-  /* Trustworthy Medical Blue */
-  --primary: 221 83% 53%;
-  --primary-foreground: 210 40% 98%;
+  /* Medical Green Primary */
+  --primary: 142 68% 34%;
+  --primary-foreground: 0 0% 100%;
 
-  --secondary: 210 40% 96%;
-  --secondary-foreground: 222 47% 11%;
+  --secondary: 138 28% 94%;
+  --secondary-foreground: 142 68% 24%;
 
-  --muted: 210 40% 96%;
-  --muted-foreground: 215 16% 47%;
+  --muted: 138 18% 95%;
+  --muted-foreground: 150 14% 44%;
 
-  /* AI/Tech Cyan Accent */
-  --accent: 190 90% 50%;
+  /* Teal Accent */
+  --accent: 168 58% 34%;
   --accent-foreground: 0 0% 100%;
 
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
+  --destructive: 0 68% 50%;
+  --destructive-foreground: 0 0% 100%;
 
-  --chart-1: 221 83% 53%;
-  --chart-2: 190 90% 50%;
-  --chart-3: 160 84% 39%;
-  --chart-4: 43 100% 50%;
-  --chart-5: 0 84% 60%;
+  --chart-1: 142 68% 34%;
+  --chart-2: 168 58% 34%;
+  --chart-3: 120 52% 40%;
+  --chart-4: 188 60% 38%;
+  --chart-5: 95 45% 42%;
 
   --radius: 0.75rem;
 
@@ -133,6 +133,53 @@
   --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+}
+
+.dark {
+  --background: 152 38% 6%;
+  --foreground: 138 22% 92%;
+
+  --border: 152 28% 18%;
+  --input: 152 28% 20%;
+  --ring: 142 58% 40%;
+
+  --card: 152 32% 9%;
+  --card-foreground: 138 22% 92%;
+  --card-border: 152 28% 16%;
+
+  --sidebar: 152 55% 7%;
+  --sidebar-foreground: 138 22% 88%;
+  --sidebar-border: 152 38% 13%;
+  --sidebar-primary: 142 58% 40%;
+  --sidebar-primary-foreground: 0 0% 100%;
+  --sidebar-accent: 152 45% 12%;
+  --sidebar-accent-foreground: 138 22% 88%;
+  --sidebar-ring: 142 58% 45%;
+
+  --popover: 152 32% 9%;
+  --popover-foreground: 138 22% 92%;
+  --popover-border: 152 28% 18%;
+
+  --primary: 142 55% 40%;
+  --primary-foreground: 0 0% 100%;
+
+  --secondary: 152 32% 14%;
+  --secondary-foreground: 138 22% 85%;
+
+  --muted: 152 28% 13%;
+  --muted-foreground: 150 16% 54%;
+
+  --accent: 168 52% 40%;
+  --accent-foreground: 0 0% 100%;
+
+  --destructive: 0 62% 46%;
+  --destructive-foreground: 0 0% 100%;
+
+  --chart-1: 142 55% 42%;
+  --chart-2: 168 52% 40%;
+  --chart-3: 120 48% 42%;
+  --chart-4: 188 55% 40%;
+  --chart-5: 95 42% 44%;
 }
 
 @layer base {
@@ -150,7 +197,6 @@
   }
 }
 
-/* Base custom scrollbar for clinical cleanliness */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

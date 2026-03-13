@@ -1,0 +1,254 @@
+You are a world-class healthcare systems architect and full-stack engineer.
+
+Your task is to design a complete platform called **Chikit**.
+
+Chikit is a universal healthcare operating system that connects hospitals, doctors, laboratories, pharmacies, and patients into a single secure network.
+
+The platform must be designed for large-scale deployment across multiple hospitals and clinics, including government hospitals, private hospitals, and rural healthcare centers.
+
+The system must support millions of users and operate both online and offline.
+
+Your response must explain the platform in full technical detail including architecture, roles, workflows, APIs, database schema, and AI integration.
+
+-------------------------------------
+
+CORE VISION
+
+Chikit acts as a universal healthcare network where every patient has a digital health identity and hospitals can securely access patient medical history with consent.
+
+Patients can create a Chikit account themselves or have one created by hospitals using government ID verification such as:
+
+- Aadhaar
+- Passport
+- PAN Card
+- Voter ID
+- Driving License
+- Other government-issued IDs
+
+The system should generate a **Chikit Health ID** which acts as a universal medical identity.
+
+-------------------------------------
+
+SYSTEM REQUIREMENTS
+
+Design Chikit as a multi-hospital platform with the following components:
+
+1. Multi-hospital infrastructure
+2. Role-based hospital dashboards
+3. Patient digital health identity
+4. AI-assisted clinical tools
+5. Secure consent-based medical record sharing
+6. Offline-first architecture for rural hospitals
+7. Scalable cloud backend
+8. Mobile applications for patients and doctors
+
+-------------------------------------
+
+USER ROLES
+
+Design different login portals and dashboards for the following users:
+
+Receptionist
+Doctor
+Nurse
+Lab Technician
+Radiology Technician
+Pharmacist
+Hospital Administrator
+Government Health Authority
+Patient
+
+Each role should have different permissions and UI features.
+
+-------------------------------------
+
+PATIENT REGISTRATION
+
+Explain how patient accounts are created in two ways:
+
+1) Government Hospital Registration
+Reception staff can create patient accounts using government IDs such as Aadhaar or other ID documents.
+
+2) Self Registration
+Patients can create their own Chikit account using:
+
+mobile app
+web portal
+hospital kiosk
+
+Verification methods:
+
+OTP phone verification
+Government ID upload
+Face verification (optional)
+
+-------------------------------------
+
+PATIENT HEALTH PROFILE
+
+Design the patient profile to store:
+
+Name
+Age
+Gender
+Contact
+Government ID reference
+Allergies
+Chronic diseases
+Medications
+Past diagnoses
+Surgery history
+Lab reports
+Radiology reports
+Doctor prescriptions
+Hospital visits timeline
+
+-------------------------------------
+
+CONSENT SYSTEM
+
+Medical data must only be shared with explicit patient consent.
+
+Design a consent flow where:
+
+A doctor from a hospital requests access to patient records.
+
+The patient receives a notification on their app.
+
+Patient can allow or deny access.
+
+Consent logs must be stored securely.
+
+-------------------------------------
+
+HOSPITAL WORKFLOW
+
+Design the full hospital workflow using Chikit.
+
+Patient arrives at hospital
+Reception registers or searches patient
+Doctor consultation
+Doctor diagnosis
+Doctor prescribes medicines
+Doctor assigns lab tests
+Lab technician uploads results
+Doctor reviews results
+Pharmacy dispenses medication
+
+All steps must be connected through Chikit dashboards.
+
+-------------------------------------
+
+AI SYSTEM
+
+Chikit includes an AI assistant based on a medical LLM (such as MedGemma).
+
+The AI should help with:
+
+patient history summarization
+lab report analysis
+radiology report interpretation
+clinical documentation automation
+symptom analysis
+decision support for doctors
+
+The AI must not replace doctors and must provide explainable reasoning.
+
+-------------------------------------
+
+MULTI-HOSPITAL NETWORK
+
+Explain how multiple hospitals connect to the Chikit network.
+
+Hospitals should be able to:
+
+share patient records with consent
+sync medical records securely
+avoid duplicate tests
+maintain data privacy
+
+-------------------------------------
+
+OFFLINE SUPPORT
+
+Chikit must work offline for rural hospitals.
+
+Design an offline-first architecture where:
+
+local devices store patient data
+local encrypted databases are used
+data syncs to the cloud when internet returns
+conflict resolution mechanisms exist
+
+-------------------------------------
+
+SECURITY
+
+Design healthcare-grade security including:
+
+AES encrypted storage
+secure authentication
+JWT tokens
+role-based access control
+audit logging
+secure API communication
+data access monitoring
+
+-------------------------------------
+
+TECH STACK
+
+Propose a complete production stack including:
+
+Frontend
+Flutter for mobile apps
+React or Next.js for web dashboards
+
+Backend
+FastAPI or Node.js
+PostgreSQL database
+Redis cache
+
+AI
+MedGemma or medical LLM
+ONNX or Ollama runtime
+
+Infrastructure
+Docker containers
+cloud deployment
+microservice architecture
+
+-------------------------------------
+
+DATABASE DESIGN
+
+Provide schema examples for:
+
+Users
+Patients
+Hospitals
+Doctors
+Appointments
+MedicalRecords
+LabReports
+Prescriptions
+ConsentLogs
+AuditLogs
+
+-------------------------------------
+
+OUTPUT FORMAT
+
+Provide a full platform blueprint including:
+
+system architecture
+component diagrams
+data flow diagrams
+API design
+database structure
+user interface workflows
+security architecture
+AI integration design
+scalability considerations
+
+The goal is to produce a complete technical specification for building the Chikit healthcare platform.

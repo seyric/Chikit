@@ -1,0 +1,310 @@
+🏥 How Chikit Works (Complete System with ID Verification)
+1️⃣ Creating a Chikit Account (Patient Identity)
+
+There are two main ways a patient can get a Chikit account.
+
+Option 1 — Government Hospital Registration
+
+When a patient visits a government hospital, the receptionist can create a Chikit Health ID for them.
+
+Registration can use:
+
+Aadhaar Card
+
+Voter ID
+
+PAN Card
+
+Driving License
+
+Passport
+
+Other government-issued IDs
+
+Process:
+
+Receptionist opens Chikit Registration Panel
+
+Scans or enters patient ID
+
+System verifies identity
+
+Chikit generates a Universal Health Profile
+
+Example stored data:
+
+Name
+
+Age
+
+Contact number
+
+Government ID reference
+
+Emergency contacts
+
+Known allergies
+
+Medical conditions
+
+This creates a permanent digital health profile for the patient.
+
+[pause]
+
+Option 2 — Patient Self Sign-Up
+
+Patients can also create their own Chikit account through:
+
+Chikit mobile app
+
+Chikit website
+
+Hospital kiosk
+
+Verification methods:
+
+Aadhaar verification
+
+OTP phone verification
+
+Government ID upload
+
+Face verification (optional)
+
+Once verified, the patient receives a Chikit Health ID.
+
+This ID works across all hospitals connected to the Chikit network.
+
+2️⃣ Hospital Check-In
+
+When a patient enters any hospital using Chikit:
+
+Reception searches by:
+
+Chikit Health ID
+
+Aadhaar number
+
+Phone number
+
+QR code from patient app
+
+The system immediately loads the patient’s health profile.
+
+If the patient has never visited that hospital before, the hospital can still access their history with consent.
+
+3️⃣ Consent-Based Medical Record Access
+
+[pause]
+
+[serious tone]
+
+Patient privacy is very important.
+
+If a doctor wants to view records from another hospital, Chikit asks the patient for explicit permission.
+
+Example consent prompt:
+
+Dr. Sharma from City Hospital wants to access your medical history.
+
+Allow access?
+
+✔ Allow
+✖ Deny
+
+Without consent → records remain private.
+
+With consent → doctor can view:
+
+past treatments
+
+lab reports
+
+prescriptions
+
+surgeries
+
+allergies
+
+diagnoses
+
+4️⃣ Doctor Consultation Workflow
+
+When the patient enters the doctor’s room:
+
+Doctor opens Chikit Doctor Dashboard.
+
+They see:
+
+patient medical timeline
+
+current medications
+
+allergies
+
+previous diagnoses
+
+lab reports
+
+Doctor can easily:
+
+Prescribe Medicines
+
+Example:
+
+Medicine: Paracetamol
+Dosage: 500 mg
+Frequency: 3 times daily
+Duration: 5 days
+
+Assign Lab Tests
+
+Example:
+
+Blood Test
+
+X-Ray
+
+MRI
+
+ECG
+
+Everything is done through simple menus.
+
+5️⃣ Lab Workflow
+
+When tests are assigned:
+
+Lab technicians automatically receive test requests in their dashboard.
+
+Example:
+
+Patient: Rahul Singh
+Tests Ordered:
+- CBC
+- Blood Sugar
+
+After the test:
+
+Lab technician uploads results.
+
+Results instantly update in:
+
+doctor dashboard
+
+patient record
+
+Chikit AI system
+
+6️⃣ Chikit AI Assistance
+
+The system AI analyzes:
+
+symptoms
+
+doctor notes
+
+lab reports
+
+patient history
+
+AI can help doctors by:
+
+summarizing patient history
+
+explaining abnormal lab values
+
+suggesting possible diagnoses
+
+generating clinical documentation
+
+But final medical decisions always remain with doctors.
+
+7️⃣ Pharmacy System
+
+Doctor prescriptions automatically appear in hospital pharmacy system.
+
+Pharmacist sees:
+
+Patient: Rahul Singh
+Medicine: Paracetamol
+Dosage: 500 mg
+Duration: 5 days
+
+Pharmacist dispenses medicine and records it.
+
+8️⃣ Patient App
+
+Patients can use the Chikit mobile app.
+
+They can:
+
+view prescriptions
+
+download lab reports
+
+check medical history
+
+book appointments
+
+manage consent for hospitals
+
+share health records via QR code
+
+9️⃣ Multi-Hospital Network
+
+Chikit connects many hospitals together.
+
+Example network:
+
+Government Hospitals
+Private Hospitals
+Clinics
+Diagnostic Labs
+Pharmacies
+
+Because every patient has a Chikit Health ID, their records follow them across hospitals.
+
+With consent, doctors anywhere in the network can access history.
+
+🔄 Offline Support
+
+Chikit also works without internet.
+
+Hospital devices store records locally.
+
+When internet returns:
+
+Local Data
+    ↓
+Secure Sync
+    ↓
+Chikit Network
+
+This allows Chikit to work in:
+
+rural hospitals
+
+remote clinics
+
+low-connectivity regions
+
+🧠 Full Chikit Ecosystem
+Government ID / Aadhaar
+        │
+        ▼
+   Chikit Health ID
+        │
+        ▼
+Reception → Doctor → Lab → Pharmacy
+        │        │        │
+        └────────┴────────┘
+                │
+                ▼
+             Chikit AI
+                │
+                ▼
+        Multi-Hospital Network
+                │
+                ▼
+            Patient App

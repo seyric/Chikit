@@ -1,24 +1,32 @@
 import { useState } from "react";
-import { useListPatients, useCreatePatient, CreatePatientRequestGender } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Search, Plus, UserCircle, Loader2 } from "lucide-react";
+import { Search, Plus, UserCircle, Loader2, BadgeCheck } from "lucide-react";
 import { format } from "date-fns";
+import { useAuth } from "@/lib/auth";
+
+const API_BASE = "/api";
 
 export default function Patients() {
+  const { user } = useAuth();
   const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const { data: patients, isLoading, refetch } = useListPatients({ search });
-  
-  const createPatient = useCreatePatient();
-  const [formData, setFormData] = useState({
-    name: "", dateOfBirth: "", gender: "other" as CreatePatientRequestGender, phone: ""
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  const { data: patients, isLoading } = useQuery({
+    queryKey: ["patients", debouncedSearch],
+    queryFn: async () => {
+      const params = debouncedSearch ? `?search=${encodeURIComponent(debouncedSearch)}` : "";
+      const res = await fetch(`${API_BASE}/patients${params}`);
+      if (!res.ok) throw new Error("Failed to fetch patients");
+      return res.json();
+    },
+    enabled: !!user,
   });
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await createPatient.mutateAsync({ data: formData });
-    setIsModalOpen(false);
-    refetch();
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearch(e.target.value);
+    clearTimeout((window as any).__searchTimeout);
+    (window as any).__searchTimeout = setTimeout(() => setDebouncedSearch(e.target.value), 400);
   };
 
   return (
@@ -29,17 +37,16 @@ export default function Patients() {
           <input
             type="text"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search patients by name or code..."
+            onChange={handleSearchChange}
+            placeholder="Search by name, code, phone, or Chikit Health ID..."
             className="w-full pl-12 pr-4 py-3 rounded-xl bg-card border border-border focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all shadow-sm"
           />
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 shadow-md shadow-primary/20 transition-all"
-        >
-          <Plus className="w-5 h-5" /> Add Patient
-        </button>
+        <Link href="/patients/register">
+          <button className="flex items-center gap-2 px-6 py-3 bg-primary text-primary-foreground font-semibold rounded-xl hover:bg-primary/90 shadow-md shadow-primary/20 transition-all whitespace-nowrap">
+            <Plus className="w-5 h-5" /> Register Patient
+          </button>
+        </Link>
       </div>
 
       <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden">
@@ -50,6 +57,7 @@ export default function Patients() {
             <thead>
               <tr className="bg-muted/50 border-b border-border/50 text-muted-foreground text-sm font-semibold uppercase tracking-wider">
                 <th className="p-4 pl-6">Patient</th>
+                <th className="p-4">Chikit ID</th>
                 <th className="p-4">Code</th>
                 <th className="p-4">Age/DOB</th>
                 <th className="p-4">Gender</th>
@@ -58,20 +66,32 @@ export default function Patients() {
               </tr>
             </thead>
             <tbody>
-              {patients?.map((p) => (
+              {patients?.map((p: any) => (
                 <tr key={p.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors group">
                   <td className="p-4 pl-6">
                     <Link href={`/patients/${p.id}`} className="flex items-center gap-3 w-full">
-                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold">
+                      <div className="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold shrink-0">
                         {p.name.charAt(0)}
                       </div>
                       <span className="font-semibold text-foreground group-hover:text-primary transition-colors">{p.name}</span>
                     </Link>
                   </td>
+                  <td className="p-4">
+                    {p.chikitHealthId ? (
+                      <span className="flex items-center gap-1 text-primary font-mono text-xs font-semibold">
+                        <BadgeCheck className="w-3.5 h-3.5" />
+                        {p.chikitHealthId}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground text-xs">—</span>
+                    )}
+                  </td>
                   <td className="p-4 text-muted-foreground font-mono text-sm">{p.patientCode}</td>
-                  <td className="p-4 text-foreground">{format(new Date(p.dateOfBirth), 'MMM d, yyyy')}</td>
-                  <td className="p-4 capitalize text-foreground">{p.gender}</td>
-                  <td className="p-4 text-foreground">{p.phone || '-'}</td>
+                  <td className="p-4 text-foreground text-sm">
+                    {p.dateOfBirth ? format(new Date(p.dateOfBirth), 'MMM d, yyyy') : '—'}
+                  </td>
+                  <td className="p-4 capitalize text-foreground text-sm">{p.gender}</td>
+                  <td className="p-4 text-foreground text-sm">{p.phone || '—'}</td>
                   <td className="p-4">
                     <span className="px-3 py-1 rounded-full text-xs font-semibold bg-green-500/10 text-green-600">
                       Active
@@ -81,9 +101,10 @@ export default function Patients() {
               ))}
               {patients?.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={7} className="p-12 text-center text-muted-foreground">
                     <UserCircle className="w-12 h-12 mx-auto mb-3 opacity-20" />
-                    No patients found.
+                    <p className="font-medium">No patients found.</p>
+                    <p className="text-sm mt-1">Use "Register Patient" to add a new patient with a Chikit Health ID.</p>
                   </td>
                 </tr>
               )}
@@ -91,44 +112,6 @@ export default function Patients() {
           </table>
         )}
       </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
-          <div className="bg-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden">
-            <div className="p-6 border-b border-border">
-              <h3 className="font-display text-xl font-bold">Add New Patient</h3>
-            </div>
-            <form onSubmit={handleCreate} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-semibold mb-1">Full Name</label>
-                <input required type="text" value={formData.name} onChange={e=>setFormData({...formData, name: e.target.value})} className="w-full p-3 rounded-lg border focus:ring-2 focus:ring-primary/20 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Date of Birth</label>
-                <input required type="date" value={formData.dateOfBirth} onChange={e=>setFormData({...formData, dateOfBirth: e.target.value})} className="w-full p-3 rounded-lg border focus:ring-2 focus:ring-primary/20 outline-none" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Gender</label>
-                <select value={formData.gender} onChange={e=>setFormData({...formData, gender: e.target.value as CreatePatientRequestGender})} className="w-full p-3 rounded-lg border focus:ring-2 focus:ring-primary/20 outline-none">
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-semibold mb-1">Phone</label>
-                <input type="tel" value={formData.phone} onChange={e=>setFormData({...formData, phone: e.target.value})} className="w-full p-3 rounded-lg border focus:ring-2 focus:ring-primary/20 outline-none" />
-              </div>
-              <div className="flex gap-3 pt-4">
-                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 px-4 py-3 rounded-xl border border-border font-semibold hover:bg-muted">Cancel</button>
-                <button type="submit" disabled={createPatient.isPending} className="flex-1 px-4 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90">
-                  {createPatient.isPending ? "Saving..." : "Save Patient"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

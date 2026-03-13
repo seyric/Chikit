@@ -2,7 +2,7 @@
 
 ## Overview
 
-Chikit is an offline-first AI medical assistant and multi-hospital ERP system designed for doctors, hospitals, and patients, with focus on rural/limited-connectivity environments.
+Chikit is an offline-first AI medical assistant and multi-hospital ERP system designed for doctors, hospitals, and patients, with focus on rural/limited-connectivity environments. Built for India with support for 30,000+ hospitals, Chikit Health IDs, government ID verification, and consent-based cross-hospital record access.
 
 ## Stack
 
@@ -31,21 +31,29 @@ artifacts-monorepo/
 │   ├── api-client-react/   # Generated React Query hooks
 │   ├── api-zod/            # Generated Zod schemas from OpenAPI
 │   └── db/                 # Drizzle ORM schema + DB connection
-└── scripts/                # Utility scripts
+└── scripts/
+    └── import-hospitals.mjs  # CSV import script for national hospital registry
 ```
 
-## Key Features
+## Key Features (Completed)
 
-1. **Patient Management** - Full CRUD, lifelong medical history, patient timelines
-2. **AI Clinical Decision Support** - Symptom analysis, patient summaries, lab interpretation
-3. **Multi-Hospital ERP** - Hospital and doctor management across facilities
-4. **Medical Records** - Visit records, vital signs, diagnoses, treatment plans
-5. **Lab Reports** - Upload and AI interpretation of laboratory results
-6. **Radiology Reports** - Imaging studies (X-ray, MRI, CT, ultrasound etc.)
-7. **E-Prescriptions** - Digital prescriptions with medication details, printable
-8. **Appointment Scheduling** - Book, manage, and track appointments
-9. **Role-Based Access Control** - Admin, Doctor, Nurse, Patient roles
-10. **Audit Logs** - Complete audit trail of all medical record access
+### Task #1 — Auth, Portals, Theme (DONE)
+1. **Medical Green Theme** — HSL 142/152, dual portal login (Staff/Patient)
+2. **3-Step Auth Flow** — portal → method → form (Email/OTP/Google)
+3. **OTP Backend** — `otp_codes` table, send/verify endpoints
+4. **Patient Portal** — standalone layout at `/patient-portal`
+5. **Role-Based Navigation** — lab_tech, pharmacist, receptionist, nurse, doctor, admin
+
+### Task #2 — Hospital Directory, Chikit Health ID, Consent (DONE)
+1. **National Hospital Registry** — 29,774 hospitals imported from CSV (30,274 rows)
+   - Searchable, filterable by state/category, paginated (20/page)
+   - Hospital Directory page at `/hospitals`
+2. **Chikit Health ID** — Auto-generated `CHK-YYYY-XXXXXX` format on patient registration
+3. **Patient Registration Flow** — Full form at `/patients/register` with govt ID verification
+4. **Patients Page** — Updated with Chikit ID column, links to registration page
+5. **Consent Requests** — `consent_requests` table + CRUD API endpoints
+   - Doctor requests access → patient approves/denies
+   - 7-day expiry window, access scope controls
 
 ## Demo Credentials
 
@@ -55,21 +63,26 @@ artifacts-monorepo/
 ## API Routes
 
 All routes are under `/api/`:
-- `/auth/login`, `/auth/register`, `/auth/me` - Authentication
-- `/hospitals` - Hospital management
-- `/doctors` - Doctor management
-- `/patients` - Patient management (+ `/patients/:id/timeline`)
-- `/appointments` - Appointment scheduling
-- `/medical-records` - Medical records
-- `/lab-reports` - Lab reports
-- `/radiology-reports` - Radiology
-- `/prescriptions` - E-prescriptions
-- `/ai/analyze-symptoms` - AI symptom analysis
-- `/ai/summarize-patient` - AI patient summary
-- `/ai/interpret-lab` - AI lab interpretation
-- `/ai/results` - AI analysis history
-- `/audit-logs` - Audit trail
-- `/stats/dashboard` - Dashboard statistics
+- `/auth/login`, `/auth/register`, `/auth/me`, `/auth/send-otp`, `/auth/verify-otp` — Authentication
+- `/hospitals` — Hospital management (search/filter/paginate)
+- `/hospitals/import` — Bulk import from CSV (POST)
+- `/hospitals/states` — List of states
+- `/doctors` — Doctor management
+- `/patients` — Patient management with Chikit Health ID
+- `/patients/lookup` — Lookup by healthId, phone, or govtId
+- `/patients/:id/timeline` — Complete patient history
+- `/appointments` — Appointment scheduling
+- `/medical-records` — Medical records
+- `/lab-reports` — Lab reports
+- `/radiology-reports` — Radiology
+- `/prescriptions` — E-prescriptions
+- `/ai/analyze-symptoms` — AI symptom analysis
+- `/ai/summarize-patient` — AI patient summary
+- `/ai/interpret-lab` — AI lab interpretation
+- `/ai/results` — AI analysis history
+- `/audit-logs` — Audit trail
+- `/stats/dashboard` — Dashboard statistics
+- `/consent-requests` — Cross-hospital consent management (GET, POST, PATCH)
 
 ## Security
 
@@ -77,20 +90,30 @@ All routes are under `/api/`:
 - SHA-256 password hashing with salt
 - All medical record access logged to audit trail
 - Role-based access control enforced at route level
+- Auth token auto-added via global `window.fetch` interceptor in auth.tsx
 
 ## Database Tables
 
-- `users` - System users with roles
-- `hospitals` - Hospital facilities
-- `doctors` - Doctor profiles linked to users + hospitals
-- `patients` - Patient registry with medical info
-- `appointments` - Appointment scheduling
-- `medical_records` - Clinical visit records
-- `lab_reports` - Laboratory test results
-- `radiology_reports` - Imaging studies
-- `prescriptions` - E-prescriptions with medications
-- `ai_analysis_results` - AI decision support results
-- `audit_logs` - Full audit trail
+- `users` — System users with roles
+- `hospitals` — Hospital facilities (29,774 from national registry; columns: district, pincode, category, careType, discipline, specialties, numDoctors, bedCount, sourceId)
+- `doctors` — Doctor profiles linked to users + hospitals
+- `patients` — Patient registry (columns: chikitHealthId, govtIdType, govtIdNumber)
+- `appointments` — Appointment scheduling
+- `medical_records` — Clinical visit records
+- `lab_reports` — Laboratory test results
+- `radiology_reports` — Imaging studies
+- `prescriptions` — E-prescriptions with medications
+- `ai_analysis_results` — AI decision support results
+- `audit_logs` — Full audit trail
+- `otp_codes` — OTP verification codes
+- `consent_requests` — Cross-hospital consent requests (patientId, requestingDoctorId, status, expiresAt)
+
+## Important Notes
+
+- **Auth Pattern**: Do NOT use `token` from `useAuth()` — it's not exposed. Use `enabled: !!user` and rely on the global fetch interceptor to add Bearer tokens.
+- **DB Schema changes**: Use raw SQL `ALTER TABLE` instead of `drizzle-kit push` for interactive-prompt columns. For schema sync after raw SQL: check `lib/db/src/schema/*.ts` files.
+- **Hospital Import**: Use `node scripts/import-hospitals.mjs` for re-import. Has unique constraint on `source_id` to prevent duplicates.
+- **Chikit Health ID**: Format `CHK-YYYY-XXXXXX`, generated in `routes/patients.ts:generateChikitHealthId()`
 
 ## Development
 
@@ -101,8 +124,11 @@ pnpm --filter @workspace/api-server run dev
 # Run frontend
 pnpm --filter @workspace/chikit run dev
 
-# Push DB schema changes
+# Push DB schema changes (interactive)
 pnpm --filter @workspace/db run push
+
+# Import hospital registry (30k+ hospitals)
+node scripts/import-hospitals.mjs
 
 # Regenerate API client from OpenAPI spec
 pnpm --filter @workspace/api-spec run codegen

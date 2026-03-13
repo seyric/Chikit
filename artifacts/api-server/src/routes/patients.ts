@@ -11,14 +11,29 @@ function generatePatientCode(): string {
   return "PT" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 100).toString().padStart(2, "0");
 }
 
+function generateChikitHealthId(): string {
+  const year = new Date().getFullYear();
+  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+  let suffix = "";
+  for (let i = 0; i < 6; i++) {
+    suffix += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `CHK-${year}-${suffix}`;
+}
+
 router.get("/", requireAuth, async (req, res) => {
   try {
     const { search } = req.query;
-    let query = db.select().from(patientsTable).where(eq(patientsTable.isActive, true));
-    const patients = await query;
+    const patients = await db.select().from(patientsTable).where(eq(patientsTable.isActive, true));
     if (search) {
       const s = (search as string).toLowerCase();
-      const filtered = patients.filter(p => p.name.toLowerCase().includes(s) || p.patientCode.toLowerCase().includes(s) || p.phone?.includes(s));
+      const filtered = patients.filter(p =>
+        p.name.toLowerCase().includes(s) ||
+        p.patientCode.toLowerCase().includes(s) ||
+        p.phone?.includes(s) ||
+        p.chikitHealthId?.toLowerCase().includes(s) ||
+        p.govtIdNumber?.includes(s)
+      );
       res.json(filtered);
       return;
     }
@@ -28,17 +43,46 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
+// Patient lookup by Health ID, phone, or government ID
+router.get("/lookup", requireAuth, async (req, res) => {
+  try {
+    const { healthId, phone, govtId } = req.query as Record<string, string>;
+    let patient = null;
+
+    if (healthId) {
+      const [p] = await db.select().from(patientsTable).where(ilike(patientsTable.chikitHealthId, healthId));
+      patient = p;
+    } else if (phone) {
+      const [p] = await db.select().from(patientsTable).where(ilike(patientsTable.phone, phone));
+      patient = p;
+    } else if (govtId) {
+      const [p] = await db.select().from(patientsTable).where(ilike(patientsTable.govtIdNumber, govtId));
+      patient = p;
+    }
+
+    if (!patient) {
+      res.status(404).json({ error: "not_found", message: "Patient not found" });
+      return;
+    }
+    res.json(patient);
+  } catch {
+    res.status(500).json({ error: "internal_error", message: "Failed to lookup patient" });
+  }
+});
+
 router.post("/", requireAuth, async (req, res) => {
   try {
-    const { name, dateOfBirth, gender, bloodGroup, phone, email, address, emergencyContact, emergencyPhone, allergies, chronicConditions, hospitalId } = req.body;
+    const { name, dateOfBirth, gender, bloodGroup, phone, email, address, emergencyContact, emergencyPhone, allergies, chronicConditions, hospitalId, govtIdType, govtIdNumber } = req.body;
     const patientCode = generatePatientCode();
+    const chikitHealthId = generateChikitHealthId();
     const [patient] = await db.insert(patientsTable).values({
-      patientCode, name, dateOfBirth, gender, bloodGroup, phone, email, address,
+      patientCode, chikitHealthId, name, dateOfBirth, gender, bloodGroup, phone, email, address,
       emergencyContact, emergencyPhone, allergies, chronicConditions, hospitalId: hospitalId ?? null,
+      govtIdType: govtIdType ?? null, govtIdNumber: govtIdNumber ?? null,
     }).returning();
-    await createAuditLog(req, "create", "patient", patient.id, `Created patient ${name}`);
+    await createAuditLog(req, "create", "patient", patient.id, `Created patient ${name} with Health ID ${chikitHealthId}`);
     res.status(201).json(patient);
-  } catch {
+  } catch (err: any) {
     res.status(500).json({ error: "internal_error", message: "Failed to create patient" });
   }
 });
@@ -56,8 +100,8 @@ router.get("/:id", requireAuth, async (req, res) => {
 
 router.put("/:id", requireAuth, async (req, res) => {
   try {
-    const { name, phone, email, address, emergencyContact, emergencyPhone, allergies, chronicConditions, bloodGroup } = req.body;
-    const [patient] = await db.update(patientsTable).set({ name, phone, email, address, emergencyContact, emergencyPhone, allergies, chronicConditions, bloodGroup, updatedAt: new Date() })
+    const { name, phone, email, address, emergencyContact, emergencyPhone, allergies, chronicConditions, bloodGroup, govtIdType, govtIdNumber } = req.body;
+    const [patient] = await db.update(patientsTable).set({ name, phone, email, address, emergencyContact, emergencyPhone, allergies, chronicConditions, bloodGroup, govtIdType, govtIdNumber, updatedAt: new Date() })
       .where(eq(patientsTable.id, Number(req.params.id))).returning();
     await createAuditLog(req, "update", "patient", patient.id);
     res.json(patient);

@@ -225,20 +225,26 @@ const drugs = [
 async function seedDrugs() {
   const [{ cnt }] = await db.select({ cnt: count() }).from(drugsTable);
   if (Number(cnt) >= 200) {
-    console.log(`Drugs table already has ${cnt} entries (≥200). Skipping seed.`);
-    return;
+    console.log(`Drugs table already has ${cnt} entries. Checking for re-seed...`);
   }
   if (Number(cnt) > 0) {
     console.log(`Clearing ${cnt} existing drugs for re-seed...`);
     await db.delete(drugsTable);
   }
-  console.log(`Seeding ${drugs.length} drugs...`);
-  for (let i = 0; i < drugs.length; i += 50) {
-    const batch = drugs.slice(i, i + 50);
+  const seen = new Set<string>();
+  const uniqueDrugs = drugs.filter(d => {
+    const key = d.name.toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  console.log(`Seeding ${uniqueDrugs.length} unique drugs (${drugs.length - uniqueDrugs.length} duplicates removed)...`);
+  for (let i = 0; i < uniqueDrugs.length; i += 50) {
+    const batch = uniqueDrugs.slice(i, i + 50);
     await db.insert(drugsTable).values(batch);
     console.log(`  Inserted batch ${Math.floor(i / 50) + 1}`);
   }
-  console.log(`Done. Seeded ${drugs.length} drugs.`);
+  console.log(`Done. Seeded ${uniqueDrugs.length} drugs.`);
 }
 
 seedDrugs().then(() => process.exit(0)).catch(e => { console.error(e); process.exit(1); });

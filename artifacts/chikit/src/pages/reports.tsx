@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { motion } from "framer-motion";
-import { BarChart3, TrendingUp, Activity, Pill } from "lucide-react";
+import { BarChart3, TrendingUp, Activity, Pill, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   BarChart,
@@ -17,8 +17,6 @@ import {
   PieChart,
   Pie,
   Cell,
-  AreaChart,
-  Area,
   Legend,
 } from "recharts";
 
@@ -37,7 +35,16 @@ const COLORS = [
 
 export default function Reports() {
   const { user } = useAuth();
+  const qc = useQueryClient();
   const [days, setDays] = useState(7);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    qc.invalidateQueries({ queryKey: ["reports"] }).then(() => {
+      setTimeout(() => setRefreshing(false), 600);
+    });
+  };
 
   const { data: dailyPatients, isLoading: loadingPatients } = useQuery({
     queryKey: ["reports", "daily-patients", days],
@@ -92,7 +99,14 @@ export default function Reports() {
             Insights across your hospital operations
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={handleRefresh}
+            className="p-2 rounded-lg bg-muted/30 text-muted-foreground hover:bg-muted/50 transition-colors"
+            title="Refresh data"
+          >
+            <RefreshCw className={cn("w-4 h-4", refreshing && "animate-spin")} />
+          </button>
           {[7, 14, 30].map((d) => (
             <button
               key={d}
@@ -128,7 +142,7 @@ export default function Reports() {
             </div>
           ) : (
             <ResponsiveContainer width="100%" height={260}>
-              <AreaChart
+              <BarChart
                 data={(dailyPatients || []).map(
                   (d: { date: string; count: number }) => ({
                     ...d,
@@ -136,12 +150,6 @@ export default function Reports() {
                   }),
                 )}
               >
-                <defs>
-                  <linearGradient id="patientGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#10b981" stopOpacity={0.3} />
-                    <stop offset="100%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
                 <CartesianGrid
                   strokeDasharray="3 3"
                   stroke="hsl(var(--border))"
@@ -164,15 +172,13 @@ export default function Reports() {
                     fontSize: 13,
                   }}
                 />
-                <Area
-                  type="monotone"
+                <Bar
                   dataKey="count"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fill="url(#patientGrad)"
+                  fill="#10b981"
+                  radius={[6, 6, 0, 0]}
                   name="Patients"
                 />
-              </AreaChart>
+              </BarChart>
             </ResponsiveContainer>
           )}
         </motion.div>

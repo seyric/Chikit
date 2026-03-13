@@ -1,9 +1,8 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
-import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { Users, Plus, Search, Shield, UserCheck, UserX, X } from "lucide-react";
+import { Plus, Search, Shield, UserCheck, UserX, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface StaffMember {
@@ -13,6 +12,8 @@ interface StaffMember {
   phone: string | null;
   role: string;
   hospitalId: number | null;
+  department: string | null;
+  staffId: string | null;
   isActive: boolean;
   createdAt: string;
 }
@@ -25,6 +26,12 @@ const ROLES = [
   { value: "radiology_technician", label: "Radiology Technician" },
   { value: "pharmacist", label: "Pharmacist" },
   { value: "receptionist", label: "Receptionist" },
+];
+
+const DEPARTMENTS = [
+  "General Medicine", "Surgery", "Pediatrics", "Cardiology", "Orthopedics",
+  "Dermatology", "ENT", "Ophthalmology", "Radiology", "Pathology",
+  "Emergency", "ICU", "Pharmacy", "Administration", "Reception",
 ];
 
 const roleBadgeColor: Record<string, string> = {
@@ -45,7 +52,7 @@ export default function StaffManagement() {
   const [showAdd, setShowAdd] = useState(false);
   const [page, setPage] = useState(1);
 
-  const [form, setForm] = useState({ name: "", email: "", role: "doctor", phone: "", password: "", hospitalId: "" });
+  const [form, setForm] = useState({ name: "", email: "", role: "doctor", phone: "", password: "", department: "" });
 
   const { data, isLoading } = useQuery({
     queryKey: ["staff", search, filterRole, page],
@@ -64,7 +71,7 @@ export default function StaffManagement() {
       const res = await fetch("/api/staff", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...body, hospitalId: body.hospitalId ? Number(body.hospitalId) : null }),
+        body: JSON.stringify(body),
       });
       if (!res.ok) {
         const err = await res.json();
@@ -75,7 +82,7 @@ export default function StaffManagement() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["staff"] });
       setShowAdd(false);
-      setForm({ name: "", email: "", role: "doctor", phone: "", password: "", hospitalId: "" });
+      setForm({ name: "", email: "", role: "doctor", phone: "", password: "", department: "" });
     },
   });
 
@@ -145,9 +152,12 @@ export default function StaffManagement() {
             <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))} className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
               {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
             </select>
+            <select value={form.department} onChange={e => setForm(f => ({ ...f, department: e.target.value }))} className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+              <option value="">Select Department</option>
+              {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
             <input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} placeholder="Phone (optional)" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            <input required type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Password" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            <input value={form.hospitalId} onChange={e => setForm(f => ({ ...f, hospitalId: e.target.value }))} placeholder="Hospital ID (optional)" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <input required type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Temporary Password" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
             <div className="col-span-2 flex justify-end gap-3">
               <button type="button" onClick={() => setShowAdd(false)} className="px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground">Cancel</button>
               <button type="submit" disabled={createMutation.isPending} className="px-6 py-2.5 bg-primary text-primary-foreground rounded-xl font-medium text-sm hover:bg-primary/90 disabled:opacity-50">
@@ -168,38 +178,36 @@ export default function StaffManagement() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Email</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Hospital</th>
-                <th className="text-left px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
-                <th className="text-right px-6 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Staff ID</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Name</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Role</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Department</th>
+                <th className="text-left px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Status</th>
+                <th className="text-right px-5 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
               {staff.map((s, i) => (
                 <motion.tr key={s.id} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.03 }} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm">
-                        {s.name.charAt(0).toUpperCase()}
-                      </div>
+                  <td className="px-5 py-4 text-sm text-muted-foreground font-mono">{s.staffId || "—"}</td>
+                  <td className="px-5 py-4">
+                    <div>
                       <span className="font-medium text-sm text-foreground">{s.name}</span>
+                      <p className="text-xs text-muted-foreground">{s.email}</p>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{s.email}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-5 py-4">
                     <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium border", roleBadgeColor[s.role] || "bg-muted/15 text-muted-foreground border-border")}>
                       {s.role.replace(/_/g, " ")}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-sm text-muted-foreground">{s.hospitalId ? `#${s.hospitalId}` : "—"}</td>
-                  <td className="px-6 py-4">
+                  <td className="px-5 py-4 text-sm text-muted-foreground">{s.department || "—"}</td>
+                  <td className="px-5 py-4">
                     <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium", s.isActive ? "bg-emerald-500/15 text-emerald-400" : "bg-red-500/15 text-red-400")}>
                       {s.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-5 py-4 text-right">
                     <button
                       onClick={() => toggleMutation.mutate({ id: s.id, isActive: !s.isActive })}
                       className={cn("p-2 rounded-lg transition-colors", s.isActive ? "hover:bg-red-500/10 text-red-400" : "hover:bg-emerald-500/10 text-emerald-400")}

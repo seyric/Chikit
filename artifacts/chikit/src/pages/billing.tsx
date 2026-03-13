@@ -16,6 +16,7 @@ interface Invoice {
   id: number;
   patientId: number;
   patientName: string | null;
+  appointmentId: number | null;
   invoiceNumber: string;
   lineItems: LineItem[];
   subtotal: string;
@@ -44,6 +45,7 @@ export default function Billing() {
 
   const [form, setForm] = useState({
     patientId: "",
+    appointmentId: "",
     tax: "0",
     discount: "0",
     notes: "",
@@ -65,6 +67,7 @@ export default function Billing() {
     mutationFn: async () => {
       const body = {
         patientId: Number(form.patientId),
+        appointmentId: form.appointmentId ? Number(form.appointmentId) : null,
         lineItems: form.lineItems.filter(li => li.description && li.amount > 0).map(li => ({
           description: li.description,
           amount: li.amount * li.quantity,
@@ -86,7 +89,7 @@ export default function Billing() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["billing"] });
       setShowCreate(false);
-      setForm({ patientId: "", tax: "0", discount: "0", notes: "", lineItems: [{ description: "", amount: 0, quantity: 1 }] });
+      setForm({ patientId: "", appointmentId: "", tax: "0", discount: "0", notes: "", lineItems: [{ description: "", amount: 0, quantity: 1 }] });
     },
   });
 
@@ -157,7 +160,10 @@ export default function Billing() {
             <button onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
           </div>
           <form onSubmit={e => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4">
-            <input required type="number" value={form.patientId} onChange={e => setForm(f => ({ ...f, patientId: e.target.value }))} placeholder="Patient ID" className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            <div className="grid grid-cols-2 gap-3">
+              <input required type="number" value={form.patientId} onChange={e => setForm(f => ({ ...f, patientId: e.target.value }))} placeholder="Patient ID" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+              <input type="number" value={form.appointmentId} onChange={e => setForm(f => ({ ...f, appointmentId: e.target.value }))} placeholder="Appointment/Visit ID (optional)" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+            </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">

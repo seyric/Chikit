@@ -12,6 +12,8 @@ export const usersTable = pgTable("users", {
     enum: ["admin", "doctor", "nurse", "patient", "lab_technician", "pharmacist", "receptionist", "radiology_technician", "government_authority"],
   }).notNull().default("patient"),
   hospitalId: integer("hospital_id"),
+  department: text("department"),
+  staffId: text("staff_id"),
   googleId: text("google_id"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),

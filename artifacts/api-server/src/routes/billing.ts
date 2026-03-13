@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { billingTable, patientsTable } from "@workspace/db";
-import { eq, desc, ilike, count, sql } from "drizzle-orm";
-import { requireAuth } from "../lib/auth.js";
+import { eq, desc, and, count } from "drizzle-orm";
+import { requireAuth, requireRole } from "../lib/auth.js";
 
 const router = Router();
 
@@ -14,45 +14,51 @@ function generateInvoiceNumber(): string {
   return `INV-${y}${m}-${rand}`;
 }
 
-router.get("/", requireAuth, async (req, res) => {
+router.get("/", requireAuth, requireRole("admin", "receptionist", "doctor"), async (req, res) => {
   try {
     const { status, patientId, page: rawPage, limit: rawLimit } = req.query;
     const page = Math.max(1, Number(rawPage) || 1);
     const limit = Math.min(Number(rawLimit) || 20, 100);
     const offset = (page - 1) * limit;
 
-    let query = db.select({
-      id: billingTable.id,
-      patientId: billingTable.patientId,
-      patientName: patientsTable.name,
-      invoiceNumber: billingTable.invoiceNumber,
-      lineItems: billingTable.lineItems,
-      subtotal: billingTable.subtotal,
-      tax: billingTable.tax,
-      discount: billingTable.discount,
-      total: billingTable.total,
-      status: billingTable.status,
-      paidAmount: billingTable.paidAmount,
-      notes: billingTable.notes,
-      createdAt: billingTable.createdAt,
-    })
-    .from(billingTable)
-    .leftJoin(patientsTable, eq(billingTable.patientId, patientsTable.id))
-    .orderBy(desc(billingTable.createdAt))
-    .limit(limit)
-    .offset(offset)
-    .$dynamic();
-
+    const conditions = [];
+    if (req.user!.hospitalId) {
+      conditions.push(eq(billingTable.hospitalId, req.user!.hospitalId));
+    }
     if (status && String(status).trim()) {
-      query = query.where(eq(billingTable.status, String(status) as "unpaid" | "partial" | "paid"));
+      conditions.push(eq(billingTable.status, String(status) as "unpaid" | "partial" | "paid"));
     }
     if (patientId) {
-      query = query.where(eq(billingTable.patientId, Number(patientId)));
+      conditions.push(eq(billingTable.patientId, Number(patientId)));
     }
 
-    const invoices = await query;
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
 
-    const [{ total }] = await db.select({ total: count() }).from(billingTable);
+    const [invoices, [{ total }]] = await Promise.all([
+      db.select({
+        id: billingTable.id,
+        patientId: billingTable.patientId,
+        patientName: patientsTable.name,
+        appointmentId: billingTable.appointmentId,
+        invoiceNumber: billingTable.invoiceNumber,
+        lineItems: billingTable.lineItems,
+        subtotal: billingTable.subtotal,
+        tax: billingTable.tax,
+        discount: billingTable.discount,
+        total: billingTable.total,
+        status: billingTable.status,
+        paidAmount: billingTable.paidAmount,
+        notes: billingTable.notes,
+        createdAt: billingTable.createdAt,
+      })
+      .from(billingTable)
+      .leftJoin(patientsTable, eq(billingTable.patientId, patientsTable.id))
+      .where(where)
+      .orderBy(desc(billingTable.createdAt))
+      .limit(limit)
+      .offset(offset),
+      db.select({ total: count() }).from(billingTable).where(where),
+    ]);
 
     res.json({ invoices, total: Number(total), page, limit });
   } catch (err) {
@@ -61,9 +67,9 @@ router.get("/", requireAuth, async (req, res) => {
   }
 });
 
-router.post("/", requireAuth, async (req, res) => {
+router.post("/", requireAuth, requireRole("admin", "receptionist"), async (req, res) => {
   try {
-    const { patientId, lineItems, tax, discount, notes } = req.body;
+    const { patientId, appointmentId, lineItems, tax, discount, notes } = req.body;
     if (!patientId || !Array.isArray(lineItems) || lineItems.length === 0) {
       res.status(400).json({ error: "validation_error", message: "patientId and lineItems required" });
       return;
@@ -76,8 +82,9 @@ router.post("/", requireAuth, async (req, res) => {
 
     const [invoice] = await db.insert(billingTable).values({
       patientId: Number(patientId),
-      hospitalId: req.user?.hospitalId || null,
-      createdBy: req.user?.id || null,
+      appointmentId: appointmentId ? Number(appointmentId) : null,
+      hospitalId: req.user!.hospitalId || null,
+      createdBy: req.user!.id,
       invoiceNumber: generateInvoiceNumber(),
       lineItems,
       subtotal: String(subtotal),
@@ -94,11 +101,19 @@ router.post("/", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/:id", requireAuth, async (req, res) => {
+router.patch("/:id", requireAuth, requireRole("admin", "receptionist"), async (req, res) => {
   try {
     const id = Number(req.params.id);
-    const { status, paidAmount } = req.body;
 
+    if (req.user!.hospitalId) {
+      const [existing] = await db.select({ hospitalId: billingTable.hospitalId }).from(billingTable).where(eq(billingTable.id, id));
+      if (!existing || existing.hospitalId !== req.user!.hospitalId) {
+        res.status(403).json({ error: "forbidden", message: "Cannot modify invoices from another hospital" });
+        return;
+      }
+    }
+
+    const { status, paidAmount } = req.body;
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (status) updates.status = status;
     if (paidAmount !== undefined) updates.paidAmount = String(paidAmount);

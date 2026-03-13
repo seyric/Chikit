@@ -1,8 +1,9 @@
-import { pgTable, serial, integer, text, timestamp, numeric, jsonb, boolean } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, numeric, jsonb } from "drizzle-orm/pg-core";
 
 export const billingTable = pgTable("billing", {
   id: serial("id").primaryKey(),
   patientId: integer("patient_id").notNull(),
+  appointmentId: integer("appointment_id"),
   hospitalId: integer("hospital_id"),
   createdBy: integer("created_by"),
   invoiceNumber: text("invoice_number").notNull(),

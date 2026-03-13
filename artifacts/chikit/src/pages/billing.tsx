@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { format } from "date-fns";
 import { motion } from "framer-motion";
-import { Receipt, Plus, X, IndianRupee, CheckCircle, Clock, AlertCircle, Trash2 } from "lucide-react";
+import { Receipt, Plus, X, IndianRupee, CheckCircle, Clock, AlertCircle, Trash2, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface LineItem {
@@ -29,6 +29,69 @@ interface Invoice {
   createdAt: string;
 }
 
+interface PatientResult {
+  id: number;
+  name: string;
+  chikitHealthId: string | null;
+  phone: string | null;
+}
+
+function PatientSearch({ onSelect, selectedId }: { onSelect: (p: PatientResult) => void; selectedId: string }) {
+  const { user } = useAuth();
+  const [q, setQ] = useState("");
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const { data: patients } = useQuery({
+    queryKey: ["patient-search", q],
+    queryFn: async () => {
+      if (q.length < 2) return [];
+      const res = await fetch(`/api/patients?q=${encodeURIComponent(q)}&limit=8`);
+      const data = await res.json();
+      return (data.patients || data || []) as PatientResult[];
+    },
+    enabled: !!user && q.length >= 2,
+  });
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <input
+          value={q}
+          onChange={e => { setQ(e.target.value); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          placeholder={selectedId ? `Patient #${selectedId} selected — search to change` : "Search patient by name, phone, or Health ID..."}
+          className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+      </div>
+      {open && patients && patients.length > 0 && (
+        <div className="absolute z-20 w-full mt-1 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto">
+          {patients.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => { onSelect(p); setQ(p.name); setOpen(false); }}
+              className="w-full text-left px-4 py-2.5 hover:bg-muted/30 text-sm flex justify-between items-center border-b border-border last:border-0"
+            >
+              <span className="font-medium text-foreground">{p.name}</span>
+              <span className="text-xs text-muted-foreground">{p.chikitHealthId || `#${p.id}`}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const statusConfig: Record<string, { icon: React.ElementType; color: string; label: string }> = {
   unpaid: { icon: Clock, color: "bg-yellow-500/15 text-yellow-400 border-yellow-500/20", label: "Unpaid" },
   partial: { icon: AlertCircle, color: "bg-orange-500/15 text-orange-400 border-orange-500/20", label: "Partial" },
@@ -40,6 +103,8 @@ export default function Billing() {
   const qc = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [filterStatus, setFilterStatus] = useState("");
+  const [filterPatientId, setFilterPatientId] = useState("");
+  const [filterPatientName, setFilterPatientName] = useState("");
   const [page, setPage] = useState(1);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
 
@@ -53,10 +118,11 @@ export default function Billing() {
   });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["billing", filterStatus, page],
+    queryKey: ["billing", filterStatus, filterPatientId, page],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), limit: "15" });
       if (filterStatus) params.set("status", filterStatus);
+      if (filterPatientId) params.set("patientId", filterPatientId);
       const res = await fetch(`/api/billing?${params}`);
       return res.json();
     },
@@ -139,18 +205,31 @@ export default function Billing() {
         </button>
       </div>
 
-      <div className="flex gap-2">
-        {["", "unpaid", "partial", "paid"].map(s => (
-          <button
-            key={s}
-            onClick={() => { setFilterStatus(s); setPage(1); }}
-            className={cn("px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
-              filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
-            )}
-          >
-            {s ? s.charAt(0).toUpperCase() + s.slice(1) : "All"}
+      <div className="flex gap-3 items-center flex-wrap">
+        <div className="flex gap-2">
+          {["", "unpaid", "partial", "paid"].map(s => (
+            <button
+              key={s}
+              onClick={() => { setFilterStatus(s); setPage(1); }}
+              className={cn("px-3 py-1.5 rounded-lg text-sm font-medium transition-colors",
+                filterStatus === s ? "bg-primary text-primary-foreground" : "bg-muted/30 text-muted-foreground hover:bg-muted/50"
+              )}
+            >
+              {s ? s.charAt(0).toUpperCase() + s.slice(1) : "All"}
+            </button>
+          ))}
+        </div>
+        <div className="flex-1 min-w-[200px]">
+          <PatientSearch
+            selectedId={filterPatientId}
+            onSelect={(p) => { setFilterPatientId(String(p.id)); setFilterPatientName(p.name); setPage(1); }}
+          />
+        </div>
+        {filterPatientId && (
+          <button onClick={() => { setFilterPatientId(""); setFilterPatientName(""); setPage(1); }} className="px-3 py-1.5 rounded-lg text-sm font-medium bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center gap-1">
+            <X className="w-3 h-3" /> {filterPatientName || `Patient #${filterPatientId}`}
           </button>
-        ))}
+        )}
       </div>
 
       {showCreate && (
@@ -160,10 +239,11 @@ export default function Billing() {
             <button onClick={() => setShowCreate(false)} className="text-muted-foreground hover:text-foreground"><X className="w-5 h-5" /></button>
           </div>
           <form onSubmit={e => { e.preventDefault(); createMutation.mutate(); }} className="space-y-4">
-            <div className="grid grid-cols-2 gap-3">
-              <input required type="number" value={form.patientId} onChange={e => setForm(f => ({ ...f, patientId: e.target.value }))} placeholder="Patient ID" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-              <input type="number" value={form.appointmentId} onChange={e => setForm(f => ({ ...f, appointmentId: e.target.value }))} placeholder="Appointment/Visit ID (optional)" className="px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
-            </div>
+            <PatientSearch
+              selectedId={form.patientId}
+              onSelect={(p) => setForm(f => ({ ...f, patientId: String(p.id) }))}
+            />
+            <input type="number" value={form.appointmentId} onChange={e => setForm(f => ({ ...f, appointmentId: e.target.value }))} placeholder="Appointment/Visit ID (optional)" className="w-full px-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
 
             <div className="space-y-3">
               <div className="flex items-center justify-between">

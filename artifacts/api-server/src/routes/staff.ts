@@ -32,6 +32,9 @@ router.get("/", requireAuth, requireRole("admin"), async (req, res) => {
     if (role && String(role).trim()) {
       conditions.push(eq(usersTable.role, String(role)));
     }
+    if (req.query.department && String(req.query.department).trim()) {
+      conditions.push(eq(usersTable.department, String(req.query.department)));
+    }
 
     const where = and(...conditions);
 

@@ -49,17 +49,19 @@ export default function StaffManagement() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [filterRole, setFilterRole] = useState("");
+  const [filterDepartment, setFilterDepartment] = useState("");
   const [showAdd, setShowAdd] = useState(false);
   const [page, setPage] = useState(1);
 
   const [form, setForm] = useState({ name: "", email: "", role: "doctor", phone: "", password: "", department: "" });
 
   const { data, isLoading } = useQuery({
-    queryKey: ["staff", search, filterRole, page],
+    queryKey: ["staff", search, filterRole, filterDepartment, page],
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page), limit: "15" });
       if (search) params.set("q", search);
       if (filterRole) params.set("role", filterRole);
+      if (filterDepartment) params.set("department", filterDepartment);
       const res = await fetch(`/api/staff?${params}`);
       return res.json();
     },
@@ -137,6 +139,14 @@ export default function StaffManagement() {
         >
           <option value="">All Roles</option>
           {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
+        </select>
+        <select
+          value={filterDepartment}
+          onChange={e => { setFilterDepartment(e.target.value); setPage(1); }}
+          className="px-4 py-2.5 bg-card border border-border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+        >
+          <option value="">All Departments</option>
+          {DEPARTMENTS.map(d => <option key={d} value={d}>{d}</option>)}
         </select>
       </div>
 

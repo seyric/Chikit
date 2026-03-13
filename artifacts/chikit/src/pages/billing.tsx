@@ -46,9 +46,10 @@ function PatientSearch({ onSelect, selectedId }: { onSelect: (p: PatientResult) 
     queryKey: ["patient-search", q],
     queryFn: async () => {
       if (q.length < 2) return [];
-      const res = await fetch(`/api/patients?q=${encodeURIComponent(q)}&limit=8`);
+      const res = await fetch(`/api/patients?search=${encodeURIComponent(q)}`);
       const data = await res.json();
-      return (data.patients || data || []) as PatientResult[];
+      const arr = Array.isArray(data) ? data : (data.patients || []);
+      return (arr as PatientResult[]).slice(0, 8);
     },
     enabled: !!user && q.length >= 2,
   });

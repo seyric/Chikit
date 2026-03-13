@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { billingTable, patientsTable } from "@workspace/db";
-import { eq, desc, and, count } from "drizzle-orm";
+import { eq, desc, and, count, sql } from "drizzle-orm";
 import { requireAuth, requireRole } from "../lib/auth.js";
 
 const router = Router();
@@ -73,6 +73,33 @@ router.post("/", requireAuth, requireRole("admin", "receptionist"), async (req, 
     if (!patientId || !Array.isArray(lineItems) || lineItems.length === 0) {
       res.status(400).json({ error: "validation_error", message: "patientId and lineItems required" });
       return;
+    }
+
+    if (req.user!.hospitalId) {
+      const patientCheck = await db.execute(
+        sql`SELECT 1 FROM patients p
+            JOIN appointments a ON a.patient_id = p.id
+            JOIN doctors d ON d.id = a.doctor_id AND d.hospital_id = ${req.user!.hospitalId}
+            WHERE p.id = ${Number(patientId)}
+            LIMIT 1`
+      );
+      if (patientCheck.rows.length === 0) {
+        res.status(403).json({ error: "forbidden", message: "Patient does not belong to your hospital" });
+        return;
+      }
+    }
+
+    if (appointmentId && req.user!.hospitalId) {
+      const apptCheck = await db.execute(
+        sql`SELECT 1 FROM appointments a
+            JOIN doctors d ON d.id = a.doctor_id AND d.hospital_id = ${req.user!.hospitalId}
+            WHERE a.id = ${Number(appointmentId)} AND a.patient_id = ${Number(patientId)}
+            LIMIT 1`
+      );
+      if (apptCheck.rows.length === 0) {
+        res.status(403).json({ error: "forbidden", message: "Appointment does not belong to your hospital or patient" });
+        return;
+      }
     }
 
     const subtotal = lineItems.reduce((sum: number, item: { amount: number }) => sum + (Number(item.amount) || 0), 0);

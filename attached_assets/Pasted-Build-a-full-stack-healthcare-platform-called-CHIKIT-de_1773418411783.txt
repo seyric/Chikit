@@ -1,0 +1,552 @@
+Build a full-stack healthcare platform called **CHIKIT** designed for hospitals across India. The system acts as a **national health record platform** where hospitals, clinics, labs, pharmacies, doctors, and patients interact through one unified system.
+
+The platform must be **multi-tenant**. Every hospital operates in its own workspace accessed via subdomains.
+
+Examples
+aiimsdelhi.chikit.app
+apollohospital.chikit.app
+fortisgurgaon.chikit.app
+
+Hospitals are loaded from a **national CSV database containing all hospitals in India**. This CSV contains:
+
+Hospital Name
+Hospital ID
+City
+State
+District
+Hospital Type (Government / Private / Clinic / Diagnostic)
+
+During staff login the system must allow **searchable hospital selection from this CSV**.
+
+Use modern stack:
+
+Frontend: Next.js / React
+Backend: Node.js API / Supabase / PostgreSQL
+Authentication: OTP + secure tokens
+Storage: S3 compatible bucket for reports
+Cache: Redis
+
+UI must prioritize **speed, clarity, and minimal clicks for hospital workflows**.
+
+---
+
+CHIKIT CORE CONCEPT
+
+Every citizen has a **Chikit ID** which acts as a national digital health identity.
+
+Format example:
+
+CHIKIT-XXXXXXXX
+
+Example:
+
+CHIKIT-7F4A29D1
+
+A Chikit account stores:
+
+Patient demographics
+Prescriptions
+Diagnoses
+Lab reports
+Doctor notes
+Medication history
+Allergies
+Vaccination history
+Hospital visits
+
+Records are **append-only** and cannot be deleted by hospitals.
+
+---
+
+PATIENT SIGNUP SYSTEM
+
+Patients register using **mobile number OTP authentication**.
+
+Page: `/signup`
+
+Fields:
+
+Mobile Number
+
+Button:
+
+Send OTP
+
+---
+
+Page: `/verify-otp`
+
+Fields:
+
+OTP Code
+
+After successful verification create:
+
+Chikit ID
+Patient Account
+
+Then redirect to onboarding.
+
+---
+
+FIRST TIME USER ONBOARDING
+
+Page: `/onboarding`
+
+Fields:
+
+Full Name
+Date of Birth
+Gender
+Blood Group
+Address
+Emergency Contact
+
+Optional Section:
+
+Link Aadhaar
+
+Button:
+
+Link Aadhaar
+
+Aadhaar linking must be optional and can be completed later.
+
+If user skips Aadhaar linking they can still use the platform normally.
+
+---
+
+PATIENT DASHBOARD
+
+Page: `/dashboard`
+
+Mobile friendly layout.
+
+Top card:
+
+Patient Name
+Chikit ID
+Blood Group
+Emergency Contact
+
+Sections:
+
+Upcoming Appointments
+Recent Prescriptions
+Recent Lab Reports
+Active Medications
+Medical Alerts
+Recent Hospital Visits
+
+Buttons:
+
+Book Appointment
+Upload Medical Report
+View Full Records
+Share Records with Doctor
+
+---
+
+PATIENT RECORDS PAGE
+
+Page: `/records`
+
+Display medical history in timeline format.
+
+Categories:
+
+Prescriptions
+Lab Reports
+Diagnoses
+Hospital Visits
+Vaccinations
+Allergies
+
+Doctors can append new entries but cannot modify older ones.
+
+---
+
+STAFF LOGIN SYSTEM
+
+Page: `/staff-login`
+
+Staff must **select their hospital first**.
+
+Fields:
+
+Search Hospital
+
+This must load hospitals from the national CSV.
+
+Dropdown should support:
+
+Typing hospital name
+Filtering by city
+Filtering by state
+
+Display:
+
+Hospital Name
+City
+State
+
+After selecting hospital the login continues.
+
+Fields:
+
+Staff Email or Staff ID
+Password
+
+Successful login redirects to:
+
+hospital-subdomain.chikit.app/dashboard
+
+---
+
+HOSPITAL MAIN DASHBOARD
+
+Page: `/hospital-dashboard`
+
+Panels:
+
+Today's Appointments
+Patients Checked In
+Lab Requests Pending
+Emergency Alerts
+Bed Availability
+
+Left Sidebar Navigation:
+
+Patients
+Appointments
+Doctors
+Lab
+Pharmacy
+Drug Database
+Billing
+Reports
+Staff Management
+
+---
+
+RECEPTIONIST DASHBOARD
+
+Page: `/reception`
+
+Receptionists manage patient intake.
+
+Widgets:
+
+Patient Search
+Today's Queue
+New Patient Registration
+Appointment Scheduling
+
+---
+
+RECEPTIONIST ADD PATIENT PAGE
+
+Page: `/reception/new-patient`
+
+Receptionist can create Chikit accounts for walk-in patients.
+
+Two methods must exist.
+
+Method 1:
+
+Mobile Number
+Send OTP
+
+Method 2:
+
+Aadhaar Number Lookup
+
+If Aadhaar already linked to a Chikit account the system retrieves the patient.
+
+If not, receptionist can create a new patient profile.
+
+Fields:
+
+Full Name
+DOB
+Gender
+Blood Group
+Mobile Number
+Address
+
+System generates:
+
+Chikit ID
+
+---
+
+PATIENT PROFILE PAGE (FOR STAFF)
+
+Page: `/patient/{chikit-id}`
+
+This is the **main patient medical overview** used by doctors.
+
+Top header card must show:
+
+Patient Name
+Age
+Gender
+Blood Group
+Allergies
+Chronic Conditions
+Chikit ID
+
+Tabs below:
+
+Overview
+Visits
+Prescriptions
+Lab Reports
+Medications
+Doctor Notes
+
+---
+
+PATIENT OVERVIEW SCREEN
+
+Critical information must be visible immediately.
+
+Sections:
+
+Active Medications
+Known Allergies
+Chronic Conditions
+Recent Diagnoses
+Recent Hospital Visits
+
+Alerts must appear if:
+
+Drug allergy conflict
+Dangerous medication interaction
+
+---
+
+DOCTOR DASHBOARD
+
+Page: `/doctor-dashboard`
+
+Widgets:
+
+Today's Appointments
+Current Queue
+Recent Patients
+Pending Lab Results
+
+Quick actions:
+
+Open Patient Record
+Write Prescription
+Request Lab Test
+
+---
+
+DOCTOR CONSULTATION PAGE
+
+Page: `/consultation/{visit-id}`
+
+Layout must show patient summary on left side.
+
+Sections:
+
+Symptoms
+Diagnosis
+Vitals
+Notes
+
+Buttons:
+
+Add Prescription
+Order Lab Test
+Upload Document
+
+---
+
+PRESCRIPTION BUILDER
+
+Doctors select medicines from the **national drug database**.
+
+Fields:
+
+Drug Name
+Dosage
+Frequency
+Duration
+Instructions
+
+Example:
+
+Paracetamol
+500mg
+Twice Daily
+5 Days
+
+---
+
+DRUG DATABASE SYSTEM
+
+Page: `/drug-database`
+
+This database contains **all medicines approved in India**.
+
+Fields stored per drug:
+
+Drug Name
+Generic Name
+Brand Names
+Drug Class
+Dosage Forms
+Strength
+Contraindications
+Common Side Effects
+Pregnancy Risk
+Drug Interactions
+
+Search must support:
+
+Drug name
+Generic name
+Brand name
+
+Doctors should receive **interaction alerts** when prescribing medicines that conflict.
+
+---
+
+PHARMACY DASHBOARD
+
+Page: `/pharmacy`
+
+Pharmacists can view prescriptions.
+
+Sections:
+
+Pending Prescriptions
+Dispensed Medicines
+Inventory
+
+Pharmacists mark prescriptions as:
+
+Dispensed
+Partially Dispensed
+Unavailable
+
+---
+
+LAB DASHBOARD
+
+Page: `/lab`
+
+Lab technicians manage test requests.
+
+Sections:
+
+Pending Tests
+Samples Collected
+Reports Pending
+
+Lab tech uploads test results as:
+
+PDF
+Image
+Structured data
+
+Once uploaded the report appears in the patient record.
+
+---
+
+APPOINTMENT SYSTEM
+
+Page: `/appointments`
+
+Features:
+
+Doctor schedule
+Time slot booking
+Walk-in tokens
+
+Statuses:
+
+Booked
+Checked In
+In Consultation
+Completed
+
+---
+
+STAFF MANAGEMENT
+
+Page: `/staff-management`
+
+Hospital admins can manage staff.
+
+Roles:
+
+Doctor
+Receptionist
+Lab Technician
+Pharmacist
+Admin
+
+Fields:
+
+Name
+Role
+Department
+Email
+Staff ID
+
+---
+
+REPORTS AND ANALYTICS
+
+Page: `/reports`
+
+Hospital statistics:
+
+Daily Patients
+Doctor Workload
+Lab Tests
+Prescriptions
+
+Graphs must update in real time.
+
+---
+
+SECURITY REQUIREMENTS
+
+Role Based Access Control
+
+Receptionist cannot see full medical history
+Doctors can access patient records during visits
+Labs can only access tests assigned
+Pharmacy only sees prescriptions
+
+All medical records must be **encrypted at rest and in transit**.
+
+---
+
+ADDITIONAL FEATURES
+
+Patient QR Code
+
+Each patient profile generates a QR code containing the Chikit ID.
+
+Hospitals can scan the QR code to retrieve records instantly.
+
+---
+
+PERFORMANCE REQUIREMENTS
+
+Patient record must load in under 2 seconds.
+
+Drug database search must be instant.
+
+Hospital CSV must be indexed for fast searching.
+
+---
+
+END OF SPECIFICATION

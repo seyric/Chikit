@@ -224,9 +224,6 @@ const drugs = [
 
 async function seedDrugs() {
   const [{ cnt }] = await db.select({ cnt: count() }).from(drugsTable);
-  if (Number(cnt) >= 200) {
-    console.log(`Drugs table already has ${cnt} entries. Checking for re-seed...`);
-  }
   if (Number(cnt) > 0) {
     console.log(`Clearing ${cnt} existing drugs for re-seed...`);
     await db.delete(drugsTable);

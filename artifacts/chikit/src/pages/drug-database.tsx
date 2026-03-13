@@ -1,0 +1,211 @@
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/auth";
+import { Search, Pill, AlertTriangle, ChevronDown, ChevronUp, Loader2, X, ShieldAlert, Baby, Layers } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+interface Drug {
+  id: number;
+  name: string;
+  genericName: string;
+  brandNames: string[];
+  drugClass: string;
+  dosageForms: string[];
+  strength: string | null;
+  contraindications: string[];
+  sideEffects: string[];
+  pregnancyRisk: string | null;
+  interactions: string[];
+}
+
+function DrugCard({ drug }: { drug: Drug }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const riskColor: Record<string, string> = {
+    A: "bg-green-100 text-green-700",
+    B: "bg-blue-100 text-blue-700",
+    C: "bg-yellow-100 text-yellow-700",
+    "C/D": "bg-orange-100 text-orange-700",
+    D: "bg-red-100 text-red-700",
+    X: "bg-red-200 text-red-800",
+  };
+
+  return (
+    <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+      <div className="flex items-center gap-4 p-5 cursor-pointer" onClick={() => setExpanded(e => !e)}>
+        <div className="w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+          <Pill className="w-5 h-5 text-primary" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-bold text-foreground">{drug.name}</h3>
+            {drug.strength && <span className="text-xs bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-medium">{drug.strength}</span>}
+          </div>
+          <p className="text-sm text-muted-foreground">{drug.genericName} &bull; {drug.drugClass}</p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {drug.pregnancyRisk && (
+            <span className={cn("px-2 py-0.5 text-xs font-bold rounded-full flex items-center gap-1", riskColor[drug.pregnancyRisk] || "bg-muted text-muted-foreground")}>
+              <Baby className="w-3 h-3" /> {drug.pregnancyRisk}
+            </span>
+          )}
+          {drug.interactions.length > 0 && (
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-bold rounded-full flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" /> {drug.interactions.length}
+            </span>
+          )}
+          {expanded ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-5 pb-5 border-t border-border pt-4 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1"><Layers className="w-3.5 h-3.5" /> Brand Names</p>
+              <div className="flex flex-wrap gap-1.5">
+                {drug.brandNames.map((b, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-primary/10 text-primary text-xs font-medium rounded-full">{b}</span>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Dosage Forms</p>
+              <div className="flex flex-wrap gap-1.5">
+                {drug.dosageForms.map((f, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-muted text-foreground text-xs font-medium rounded-full">{f}</span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {drug.contraindications.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1"><ShieldAlert className="w-3.5 h-3.5 text-destructive" /> Contraindications</p>
+              <ul className="text-sm space-y-1">
+                {drug.contraindications.map((c, i) => (
+                  <li key={i} className="flex items-start gap-2"><span className="w-1.5 h-1.5 rounded-full bg-destructive mt-1.5 shrink-0" />{c}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {drug.sideEffects.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5">Common Side Effects</p>
+              <div className="flex flex-wrap gap-1.5">
+                {drug.sideEffects.map((s, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-orange-50 text-orange-700 text-xs rounded-full">{s}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {drug.interactions.length > 0 && (
+            <div>
+              <p className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1"><AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Known Drug Interactions</p>
+              <div className="flex flex-wrap gap-1.5">
+                {drug.interactions.map((int, i) => (
+                  <span key={i} className="px-2 py-0.5 bg-amber-50 text-amber-700 text-xs font-medium rounded-full border border-amber-200">{int}</span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {drug.pregnancyRisk && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-muted/30">
+              <Baby className="w-4 h-4 text-muted-foreground" />
+              <span className="text-sm">
+                <span className="font-semibold">Pregnancy Risk Category:</span>{" "}
+                <span className={cn("font-bold", drug.pregnancyRisk === "X" || drug.pregnancyRisk === "D" ? "text-destructive" : "text-foreground")}>
+                  {drug.pregnancyRisk}
+                </span>
+                {drug.pregnancyRisk === "X" && " — Contraindicated in pregnancy"}
+                {drug.pregnancyRisk === "D" && " — Evidence of fetal risk"}
+                {drug.pregnancyRisk === "C" && " — Risk cannot be ruled out"}
+                {drug.pregnancyRisk === "B" && " — No evidence of risk in humans"}
+                {drug.pregnancyRisk === "A" && " — Safe in pregnancy"}
+              </span>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function DrugDatabase() {
+  const { user } = useAuth();
+  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [filterClass, setFilterClass] = useState("");
+
+  const handleSearch = (val: string) => {
+    setSearch(val);
+    clearTimeout((window as Record<string, unknown>).__drugSearchTimer as ReturnType<typeof setTimeout>);
+    (window as Record<string, unknown>).__drugSearchTimer = setTimeout(() => setDebouncedSearch(val), 300);
+  };
+
+  const { data: drugs = [], isLoading } = useQuery<Drug[]>({
+    queryKey: ["drugs", debouncedSearch],
+    queryFn: () => {
+      const params = new URLSearchParams();
+      if (debouncedSearch) params.set("q", debouncedSearch);
+      params.set("limit", "200");
+      return fetch(`/api/drugs?${params}`).then(r => r.json());
+    },
+    enabled: !!user,
+  });
+
+  const drugClasses = [...new Set(drugs.map(d => d.drugClass))].sort();
+  const filtered = filterClass ? drugs.filter(d => d.drugClass === filterClass) : drugs;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="font-display text-2xl font-bold text-foreground">Drug Database</h2>
+        <p className="text-muted-foreground text-sm mt-0.5">Search {drugs.length}+ Indian medicines by name, generic, brand, or class</p>
+      </div>
+
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={e => handleSearch(e.target.value)}
+            placeholder="Search by drug name, generic name, brand, or class…"
+            className="w-full pl-10 pr-10 py-3 border border-border rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+          />
+          {search && (
+            <button onClick={() => { setSearch(""); setDebouncedSearch(""); }} className="absolute right-3 top-1/2 -translate-y-1/2">
+              <X className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+            </button>
+          )}
+        </div>
+        <select
+          value={filterClass}
+          onChange={e => setFilterClass(e.target.value)}
+          className="px-3 py-3 border border-border rounded-xl bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 md:w-64"
+        >
+          <option value="">All Drug Classes</option>
+          {drugClasses.map(c => <option key={c} value={c}>{c}</option>)}
+        </select>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
+      ) : filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 text-center bg-card rounded-2xl border border-dashed border-border">
+          <Pill className="w-12 h-12 text-muted-foreground/30 mb-3" />
+          <p className="font-semibold text-muted-foreground">No drugs found</p>
+          <p className="text-sm text-muted-foreground mt-1">Try a different search term</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground">{filtered.length} drug{filtered.length !== 1 ? "s" : ""} found</p>
+          {filtered.map(drug => <DrugCard key={drug.id} drug={drug} />)}
+        </div>
+      )}
+    </div>
+  );
+}

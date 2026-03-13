@@ -55,6 +55,17 @@ artifacts-monorepo/
    - Doctor requests access → patient approves/denies
    - 7-day expiry window, access scope controls
 
+### Task #4 — Drug Database & Prescription Integration (DONE)
+1. **Drug Database** — 143 Indian medicines seeded (drugs table)
+   - Drug search API: `GET /api/drugs?q=&limit=` (searches name, genericName, brandNames, drugClass)
+   - Interaction check API: `POST /api/drugs/check-interactions` (accepts drugNames array)
+   - Drug Database page at `/drug-database` with search, filters, and drug info cards
+2. **Prescription Autocomplete** — DrugSearchInput component in patient consultation
+   - Live search dropdown when typing drug name, auto-fills dosage on selection
+   - Real-time interaction checking when drugs are selected
+   - Warning banner displayed in prescription panel for known interactions
+3. **Patient Overview Alerts** — Active prescription drug interactions shown as red alert banner
+
 ## Demo Credentials
 
 - **Admin**: admin@chikit.health / admin123
@@ -83,6 +94,8 @@ All routes are under `/api/`:
 - `/audit-logs` — Audit trail
 - `/stats/dashboard` — Dashboard statistics
 - `/consent-requests` — Cross-hospital consent management (GET, POST, PATCH)
+- `/drugs?q=&limit=` — Drug search (GET)
+- `/drugs/check-interactions` — Drug interaction check (POST, body: { drugNames: string[] })
 
 ## Security
 
@@ -107,6 +120,7 @@ All routes are under `/api/`:
 - `audit_logs` — Full audit trail
 - `otp_codes` — OTP verification codes
 - `consent_requests` — Cross-hospital consent requests (patientId, requestingDoctorId, status, expiresAt)
+- `drugs` — Drug database (143 Indian medicines: name, genericName, brandNames, drugClass, strength, interactions, contraindications, sideEffects, pregnancyRisk)
 
 ## Important Notes
 

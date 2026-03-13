@@ -5,7 +5,7 @@ import {
   Activity, Calendar, Users, Building, FileText,
   Pill, LayoutDashboard, BrainCircuit, ShieldAlert, LogOut,
   TestTube, FlaskConical, UserCheck, Stethoscope, Heart,
-  BedDouble, ScanLine
+  BedDouble, ScanLine, Database
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -47,6 +47,7 @@ const getNavItems = (role?: string) => {
     return [
       { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
       { name: "Pharmacy", href: "/pharmacy", icon: Pill },
+      { name: "Drug Database", href: "/drug-database", icon: Database },
       { name: "Patients", href: "/patients", icon: Users },
     ];
   }
@@ -77,6 +78,7 @@ const getNavItems = (role?: string) => {
       { name: "Patients", href: "/patients", icon: Users },
       { name: "Appointments", href: "/appointments", icon: Calendar },
       { name: "Prescriptions", href: "/prescriptions", icon: Pill },
+      { name: "Drug Database", href: "/drug-database", icon: Database },
       { name: "Lab & Radiology", href: "/labs", icon: Activity },
       { name: "AI Assistant", href: "/ai-assistant", icon: BrainCircuit, highlight: true },
     ];
@@ -89,6 +91,7 @@ const getNavItems = (role?: string) => {
       { name: "Appointments", href: "/appointments", icon: Calendar },
       { name: "Medical Records", href: "/medical-records", icon: FileText },
       { name: "Prescriptions", href: "/prescriptions", icon: Pill },
+      { name: "Drug Database", href: "/drug-database", icon: Database },
       { name: "Lab Queue", href: "/labs", icon: TestTube },
       { name: "Radiology", href: "/radiology", icon: ScanLine },
       { name: "Pharmacy", href: "/pharmacy", icon: FlaskConical },
@@ -125,6 +128,7 @@ export function Layout({ children }: { children: ReactNode }) {
     if (location === "/radiology") return "Radiology";
     if (location === "/pharmacy") return "Pharmacy";
     if (location === "/ward") return "Ward View";
+    if (location === "/drug-database") return "Drug Database";
     return location.split("/").filter(Boolean).map(s => s.replace(/-/g, " ")).join(" / ");
   })();
 

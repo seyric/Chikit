@@ -1,17 +1,94 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRoute } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useGetPatientTimeline } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import {
   User, Calendar, Activity, Pill, BrainCircuit, FileText, Loader2,
-  Thermometer, HeartPulse, ShieldAlert, Plus, Trash2, TestTube, ScanLine, Save
+  Thermometer, HeartPulse, ShieldAlert, Plus, Trash2, TestTube, ScanLine, Save, AlertTriangle, Search, X
 } from "lucide-react";
 import { format } from "date-fns";
 import { clsx } from "clsx";
 
-interface Drug { name: string; dosage: string; frequency: string; duration: string; instructions: string; }
-const defaultDrug = (): Drug => ({ name: "", dosage: "", frequency: "twice daily", instructions: "", duration: "5 days" });
+interface DrugEntry { name: string; dosage: string; frequency: string; duration: string; instructions: string; }
+const defaultDrug = (): DrugEntry => ({ name: "", dosage: "", frequency: "twice daily", instructions: "", duration: "5 days" });
+
+interface DrugResult {
+  id: number; name: string; genericName: string; strength: string | null;
+  brandNames: string[]; drugClass: string; interactions: string[];
+}
+interface InteractionAlert { drug1: string; drug2: string; severity: string; message: string; }
+
+function DrugSearchInput({ value, onChange, onSelectDrug, index }: {
+  value: string; onChange: (val: string) => void;
+  onSelectDrug: (drug: DrugResult) => void; index: number;
+}) {
+  const [searchText, setSearchText] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+
+  const { data: results = [] } = useQuery<DrugResult[]>({
+    queryKey: ["drug-search", searchText],
+    queryFn: () => fetch(`/api/drugs?q=${encodeURIComponent(searchText)}&limit=10`).then(r => r.json()),
+    enabled: !!user && searchText.length >= 2,
+  });
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative col-span-3">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+        <input
+          value={value || searchText}
+          onChange={e => {
+            const v = e.target.value;
+            if (value) { onChange(""); }
+            setSearchText(v);
+            setShowDropdown(v.length >= 2);
+          }}
+          onFocus={() => { if (searchText.length >= 2) setShowDropdown(true); }}
+          placeholder="Search drug…"
+          className="w-full pl-8 pr-3 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        {value && (
+          <button onClick={() => { onChange(""); setSearchText(""); }} className="absolute right-2 top-1/2 -translate-y-1/2">
+            <X className="w-3.5 h-3.5 text-muted-foreground hover:text-foreground" />
+          </button>
+        )}
+      </div>
+      {showDropdown && results.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg max-h-48 overflow-y-auto">
+          {results.map(drug => (
+            <button key={drug.id} type="button"
+              className="w-full text-left px-3 py-2 hover:bg-muted/50 transition-colors flex items-center gap-2 text-sm"
+              onClick={() => {
+                onSelectDrug(drug);
+                setSearchText("");
+                setShowDropdown(false);
+              }}>
+              <Pill className="w-3.5 h-3.5 text-primary shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="font-medium truncate">{drug.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{drug.genericName} {drug.strength ? `• ${drug.strength}` : ""}</p>
+              </div>
+              {drug.interactions.length > 0 && (
+                <span className="text-xs px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded-full shrink-0">{drug.interactions.length} int.</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function PatientDetail() {
   const [, params] = useRoute("/patients/:id");
@@ -26,16 +103,66 @@ export default function PatientDetail() {
     chiefComplaint: "", diagnosis: "", treatmentPlan: "", notes: "", followUpDate: "",
     bp: "", heartRate: "", temperature: "", spo2: "",
   });
-  const [drugs, setDrugs] = useState<Drug[]>([defaultDrug()]);
+  const [drugs, setDrugs] = useState<DrugEntry[]>([defaultDrug()]);
   const [testOrder, setTestOrder] = useState({ testName: "", type: "lab", indication: "" });
+  const [rxInteractions, setRxInteractions] = useState<InteractionAlert[]>([]);
 
   const [savingVisit, setSavingVisit] = useState(false);
   const [visitSaved, setVisitSaved] = useState(false);
 
   const addDrug = () => setDrugs(d => [...d, defaultDrug()]);
-  const removeDrug = (i: number) => setDrugs(d => d.filter((_, idx) => idx !== i));
-  const updateDrug = (i: number, field: keyof Drug, val: string) =>
+  const removeDrug = (i: number) => {
+    setDrugs(d => d.filter((_, idx) => idx !== i));
+    checkInteractions(drugs.filter((_, idx) => idx !== i));
+  };
+  const updateDrug = (i: number, field: keyof DrugEntry, val: string) =>
     setDrugs(d => d.map((drug, idx) => idx === i ? { ...drug, [field]: val } : drug));
+
+  const checkInteractions = async (currentDrugs: DrugEntry[]) => {
+    const names = currentDrugs.filter(d => d.name).map(d => d.name);
+    const existingRxNames = (timeline?.prescriptions || [])
+      .filter((rx: Record<string, unknown>) => rx.status === "active")
+      .flatMap((rx: Record<string, unknown>) => ((rx.medications as Array<{name: string}>) || []).map(m => m.name))
+      .filter(Boolean);
+    const allNames = [...new Set([...names, ...existingRxNames])];
+    if (allNames.length < 2) { setRxInteractions([]); return; }
+    try {
+      const res = await fetch("/api/drugs/check-interactions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ drugNames: allNames }),
+      });
+      const data = await res.json();
+      setRxInteractions(data.interactions || []);
+    } catch { setRxInteractions([]); }
+  };
+
+  const handleSelectDrug = (i: number, drug: DrugResult) => {
+    const updated = drugs.map((d, idx) => idx === i ? {
+      ...d, name: drug.name,
+      dosage: drug.strength || d.dosage,
+    } : d);
+    setDrugs(updated);
+    checkInteractions(updated);
+  };
+
+  const { data: overviewInteractions = [] } = useQuery<InteractionAlert[]>({
+    queryKey: ["patient-interactions", patientId],
+    queryFn: async () => {
+      if (!timeline?.prescriptions) return [];
+      const activeRx = timeline.prescriptions.filter((rx: Record<string, unknown>) => rx.status === "active");
+      const allMedNames = activeRx
+        .flatMap((rx: Record<string, unknown>) => ((rx.medications as Array<{name: string}>) || []).map(m => m.name))
+        .filter(Boolean);
+      if (allMedNames.length < 2) return [];
+      const res = await fetch("/api/drugs/check-interactions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ drugNames: [...new Set(allMedNames)] }),
+      });
+      const data = await res.json();
+      return data.interactions || [];
+    },
+    enabled: !!timeline?.prescriptions && activeTab === "overview",
+  });
 
   const visitMutation = useMutation({
     mutationFn: () => {
@@ -73,6 +200,7 @@ export default function PatientDetail() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["patient-timeline", patientId] });
       setDrugs([defaultDrug()]);
+      setRxInteractions([]);
     },
   });
 
@@ -143,6 +271,22 @@ export default function PatientDetail() {
         {activeTab === "overview" && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="col-span-2 space-y-6">
+              {overviewInteractions.length > 0 && (
+                <div className="bg-red-50 border border-red-200 rounded-2xl p-5">
+                  <h3 className="font-display font-bold text-lg text-red-700 flex items-center gap-2 mb-3">
+                    <AlertTriangle className="w-5 h-5" /> Drug Interaction Alerts
+                  </h3>
+                  <div className="space-y-2">
+                    {overviewInteractions.map((ia, i) => (
+                      <div key={i} className="flex items-start gap-2 text-sm text-red-700">
+                        <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
+                        <span><b>{ia.drug1}</b> ↔ <b>{ia.drug2}</b> — {ia.message}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               <div className="bg-card rounded-2xl p-6 border border-border shadow-sm">
                 <h3 className="font-display font-bold text-lg mb-4">Patient Information</h3>
                 <div className="grid grid-cols-2 gap-y-4 gap-x-8 text-sm">
@@ -230,7 +374,6 @@ export default function PatientDetail() {
 
         {activeTab === "consultation" && isDoctor && (
           <div className="space-y-6">
-            {/* Visit Notes Panel */}
             <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
               <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
                 <h3 className="font-display font-bold text-lg flex items-center gap-2"><FileText className="w-5 h-5 text-primary" /> Visit Notes</h3>
@@ -298,7 +441,6 @@ export default function PatientDetail() {
               </div>
             </div>
 
-            {/* Prescription Panel */}
             <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
               <div className="flex items-center justify-between p-5 border-b border-border bg-muted/20">
                 <h3 className="font-display font-bold text-lg flex items-center gap-2"><Pill className="w-5 h-5 text-accent" /> Write Prescription</h3>
@@ -307,6 +449,16 @@ export default function PatientDetail() {
                 </button>
               </div>
               <div className="p-5 space-y-3">
+                {rxInteractions.length > 0 && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl space-y-1.5 mb-2">
+                    <p className="text-sm font-bold text-red-700 flex items-center gap-1.5"><AlertTriangle className="w-4 h-4" /> Drug Interaction Warning</p>
+                    {rxInteractions.map((ia, i) => (
+                      <p key={i} className="text-xs text-red-600 pl-5.5">
+                        <b>{ia.drug1}</b> ↔ <b>{ia.drug2}</b>: {ia.message}
+                      </p>
+                    ))}
+                  </div>
+                )}
                 <div className="grid grid-cols-12 gap-2 text-xs font-semibold text-muted-foreground px-1 mb-1">
                   <div className="col-span-3">Drug Name</div>
                   <div className="col-span-2">Dosage</div>
@@ -317,8 +469,12 @@ export default function PatientDetail() {
                 </div>
                 {drugs.map((drug, i) => (
                   <div key={i} className="grid grid-cols-12 gap-2 items-center">
-                    <input value={drug.name} onChange={e => updateDrug(i, "name", e.target.value)}
-                      placeholder="Drug name" className="col-span-3 px-3 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                    <DrugSearchInput
+                      value={drug.name}
+                      onChange={val => updateDrug(i, "name", val)}
+                      onSelectDrug={d => handleSelectDrug(i, d)}
+                      index={i}
+                    />
                     <input value={drug.dosage} onChange={e => updateDrug(i, "dosage", e.target.value)}
                       placeholder="500mg" className="col-span-2 px-3 py-2 text-sm border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30" />
                     <select value={drug.frequency} onChange={e => updateDrug(i, "frequency", e.target.value)}
@@ -346,7 +502,6 @@ export default function PatientDetail() {
               </div>
             </div>
 
-            {/* Order Tests Panel */}
             <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
               <div className="p-5 border-b border-border bg-muted/20">
                 <h3 className="font-display font-bold text-lg flex items-center gap-2"><TestTube className="w-5 h-5 text-yellow-600" /> Order Test / Imaging</h3>

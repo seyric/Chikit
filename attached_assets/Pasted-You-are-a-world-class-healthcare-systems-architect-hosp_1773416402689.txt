@@ -1,0 +1,238 @@
+You are a world-class healthcare systems architect, hospital workflow expert, and full-stack engineer.
+
+Your task is to design a complete healthcare platform called **Chikit**.
+
+Chikit is a universal healthcare operating system used by hospitals, doctors, laboratories, pharmacies, and patients. The system connects multiple hospitals into a single secure network while maintaining strict patient consent and privacy.
+
+The platform must reflect **real hospital workflows** and include dashboards for all hospital roles.
+
+Your output must be extremely detailed and explain exactly how the platform works.
+
+--------------------------------------------------
+
+CORE CONCEPT
+
+Chikit works as a **multi-hospital network** where each hospital has its own dedicated environment accessed via subdomains.
+
+Example hospital logins:
+
+aiimsjodhpur.chikit.app  
+apollo.chikit.app  
+cityhospital.chikit.app  
+govhospitaldelhi.chikit.app
+
+Each hospital operates independently but can securely connect to the wider Chikit healthcare network when patient consent allows record sharing.
+
+--------------------------------------------------
+
+LOGIN SYSTEM
+
+Design the login architecture.
+
+Main entry:
+
+chikit.app
+
+Users can:
+
+• login to their hospital workspace  
+• select their hospital  
+• or be redirected to their hospital subdomain
+
+Hospital subdomain example:
+
+aiimsjodhpur.chikit.app/login
+
+Login methods:
+
+• email + password
+• hospital ID
+• OTP login
+• biometric login for hospital devices
+• SSO for hospital staff
+
+User roles determine dashboard access.
+
+--------------------------------------------------
+
+USER ROLES
+
+Design dashboards and permissions for the following hospital roles:
+
+Receptionist  
+Doctor  
+Nurse  
+Lab Technician  
+Radiology Technician  
+Pharmacist  
+Hospital Administrator  
+Hospital Director  
+Government Health Authority  
+Patient
+
+Each role must have a **different interface, permissions, and tools**.
+
+--------------------------------------------------
+
+RECEPTIONIST DASHBOARD
+
+Explain exactly what the receptionist interface looks like.
+
+Main features:
+
+• patient search
+• new patient registration
+• Aadhaar / government ID scanning
+• appointment scheduling
+• hospital queue management
+• insurance verification
+• patient check-in system
+• patient wristband or QR code printing
+
+Layout example:
+
+Left Sidebar:
+Patients
+Appointments
+Admissions
+Queue
+
+Main Panel:
+Patient search bar
+Patient registration form
+Today's appointments
+Waiting list
+
+--------------------------------------------------
+
+DOCTOR DASHBOARD
+
+Design a clinical interface optimized for real medical workflow.
+
+Doctor homepage shows:
+
+• today's appointments
+• admitted patients
+• urgent cases
+• lab results awaiting review
+
+Patient consultation screen must include:
+
+Patient profile summary
+
+Age
+Gender
+Allergies
+Chronic diseases
+Current medications
+
+Medical timeline
+
+Previous visits
+Prescriptions
+Surgeries
+Hospitalizations
+Lab results
+
+Doctor actions:
+
+• add diagnosis
+• prescribe medicines
+• assign lab tests
+• order radiology
+• create admission order
+• write clinical notes
+• generate digital prescription
+
+Prescription interface must allow:
+
+medicine name
+dosage
+frequency
+duration
+special instructions
+
+All actions must automatically update the patient medical record.
+
+--------------------------------------------------
+
+LAB TECHNICIAN DASHBOARD
+
+Explain the lab interface.
+
+Lab dashboard must show:
+
+Pending tests
+Tests in progress
+Completed tests
+Critical alerts
+
+Technicians can:
+
+• view doctor test orders
+• collect sample
+• track sample status
+• upload lab results
+• mark abnormal values
+• generate lab report PDF
+
+Lab reports automatically update patient records and notify doctors.
+
+--------------------------------------------------
+
+RADIOLOGY DASHBOARD
+
+Radiology staff can:
+
+• view imaging requests
+• upload X-ray / MRI / CT scans
+• write radiology reports
+• annotate images
+• mark urgent findings
+
+Radiology reports automatically appear in the patient timeline.
+
+--------------------------------------------------
+
+PHARMACY DASHBOARD
+
+Pharmacists see:
+
+Digital prescriptions
+Medicine inventory
+Drug interaction alerts
+
+They can:
+
+• dispense medicines
+• confirm medication delivery
+• manage pharmacy inventory
+• record batch numbers
+• track controlled substances
+
+--------------------------------------------------
+
+NURSE DASHBOARD
+
+Nurses manage patient care tasks.
+
+Features:
+
+• patient vitals entry
+• medication administration
+• ward monitoring
+• doctor instructions
+• patient alerts
+
+Vital signs tracked:
+
+blood pressure
+heart rate
+temperature
+oxygen saturation
+
+--------------------------------------------------
+
+HOSPITAL ADMIN DASHBOARD
+
+Hospital administrators manage operations

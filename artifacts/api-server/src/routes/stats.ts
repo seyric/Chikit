@@ -48,11 +48,10 @@ router.get("/daily-patients", requireAuth, async (req, res) => {
           SELECT d::date AS date, COALESCE(c.cnt, 0)::int AS count
           FROM generate_series(CURRENT_DATE - ${days - 1} * interval '1 day', CURRENT_DATE, '1 day') d
           LEFT JOIN (
-            SELECT DATE(p.created_at) AS day, COUNT(*) AS cnt
+            SELECT DATE(p.created_at) AS day, COUNT(DISTINCT p.id) AS cnt
             FROM patients p
-            JOIN appointments a ON a.patient_id = p.id
-            JOIN doctors doc ON doc.id = a.doctor_id AND doc.hospital_id = ${hospitalId}
-            WHERE p.created_at >= CURRENT_DATE - ${days - 1} * interval '1 day'
+            WHERE p.hospital_id = ${hospitalId}
+              AND p.created_at >= CURRENT_DATE - ${days - 1} * interval '1 day'
             GROUP BY DATE(p.created_at)
           ) c ON d::date = c.day
           ORDER BY d
@@ -116,10 +115,9 @@ router.get("/lab-tests-by-type", requireAuth, async (req, res) => {
 
     const result = hospitalId
       ? await db.execute(sql`
-          SELECT lr.test_name AS name, COUNT(*)::int AS value
+          SELECT lr.test_name AS name, COUNT(DISTINCT lr.id)::int AS value
           FROM lab_reports lr
-          JOIN appointments a ON a.patient_id = lr.patient_id
-          JOIN doctors doc ON doc.id = a.doctor_id AND doc.hospital_id = ${hospitalId}
+          WHERE lr.hospital_id = ${hospitalId}
           GROUP BY lr.test_name
           ORDER BY value DESC
           LIMIT 10

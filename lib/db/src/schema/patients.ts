@@ -21,6 +21,10 @@ export const patientsTable = pgTable("patients", {
   govtIdNumber: text("govt_id_number"),
   hospitalId: integer("hospital_id"),
   isActive: boolean("is_active").notNull().default(true),
+  abhaNumber: text("abha_number").unique(),
+  abhaAddress: text("abha_address"),
+  abhaVerified: boolean("abha_verified").default(false),
+  abhaLinkedAt: timestamp("abha_linked_at"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

@@ -5,12 +5,12 @@ import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Building2, User, Phone, Mail, Lock, ArrowRight, ArrowLeft,
-  Loader2, CheckCircle, Stethoscope, Heart, ShieldCheck, AlertCircle
+  Loader2, CheckCircle, Stethoscope, Heart, ShieldCheck, AlertCircle, Fingerprint
 } from "lucide-react";
 
 const API_BASE = "/api";
 
-type AuthMethod = "email" | "otp" | "google";
+type AuthMethod = "email" | "otp" | "google" | "abha";
 type Step = "portal" | "method" | "form";
 
 export default function Login() {
@@ -28,6 +28,11 @@ export default function Login() {
 
   const [googleEmail, setGoogleEmail] = useState("");
   const [googleName, setGoogleName] = useState("");
+
+  const [abhaNumber, setAbhaNumber] = useState("");
+  const [abhaTxnId, setAbhaTxnId] = useState("");
+  const [abhaOtp, setAbhaOtp] = useState("");
+  const [abhaOtpSent, setAbhaOtpSent] = useState(false);
 
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
@@ -99,6 +104,43 @@ export default function Login() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAbhaSendOtp = async () => {
+    const clean = abhaNumber.replace(/[-\s]/g, "");
+    if (clean.length !== 14) { setErrorMsg("Enter your 14-digit ABHA number (e.g. 12-3456-7890-1234)"); return; }
+    setLoading(true); setErrorMsg("");
+    try {
+      const res = await fetch(`${API_BASE}/abha/auth/init`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ abhaNumber: clean }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setAbhaTxnId(data.txnId);
+      setAbhaOtpSent(true);
+    } catch (err: any) {
+      setErrorMsg(err.message || "Failed to send OTP");
+    } finally { setLoading(false); }
+  };
+
+  const handleAbhaVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true); setErrorMsg("");
+    try {
+      const res = await fetch(`${API_BASE}/abha/auth/confirm`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ txnId: abhaTxnId, otp: abhaOtp }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      login(data.token, "patient");
+      window.location.href = "/patient-portal";
+    } catch (err: any) {
+      setErrorMsg(err.message || "ABHA verification failed");
+    } finally { setLoading(false); }
   };
 
   const handleGoogleLogin = async (e: React.FormEvent) => {
@@ -231,6 +273,7 @@ export default function Login() {
                   {[
                     { method: "email" as AuthMethod, icon: Mail, title: "Email & Password", desc: "Sign in with your credentials" },
                     { method: "otp" as AuthMethod, icon: Phone, title: "Phone OTP", desc: "Receive a one-time code on your phone" },
+                    ...(portal === "patient" ? [{ method: "abha" as AuthMethod, icon: Fingerprint, title: "Login with ABHA", desc: "Use your Ayushman Bharat Health Account ID" }] : []),
                     { method: "google" as AuthMethod, icon: null, title: "Continue with Google", desc: "Use your Google account" },
                   ].map((opt) => (
                     <button
@@ -369,6 +412,54 @@ export default function Login() {
                         </>
                       )}
                     </button>
+                  </form>
+                )}
+
+                {method === "abha" && (
+                  <form onSubmit={handleAbhaVerifyOtp} className="space-y-4">
+                    <div className="p-3 rounded-xl bg-green-50 border border-green-200 text-sm text-green-800">
+                      <p className="font-semibold mb-0.5">ABHA Login (Sandbox Mode)</p>
+                      <p className="text-green-700 text-xs">Enter any 14-digit ABHA number. Use OTP: <strong>123456</strong></p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-semibold text-foreground mb-2">ABHA Number</label>
+                      <div className="relative">
+                        <Fingerprint className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={abhaNumber}
+                          onChange={e => setAbhaNumber(e.target.value)}
+                          disabled={abhaOtpSent}
+                          placeholder="XX-XXXX-XXXX-XXXX"
+                          className="w-full pl-11 pr-4 py-3 rounded-xl bg-card border-2 border-border text-foreground font-mono focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all disabled:opacity-60"
+                        />
+                      </div>
+                    </div>
+                    {!abhaOtpSent ? (
+                      <button type="button" onClick={handleAbhaSendOtp} disabled={loading}
+                        className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary/90 transition-all">
+                        {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Fingerprint className="w-4 h-4" /> Send OTP to ABHA Mobile</>}
+                      </button>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3 p-3 rounded-xl bg-primary/10 border border-primary/20">
+                          <CheckCircle className="w-4 h-4 text-primary" />
+                          <p className="text-sm font-semibold text-primary">OTP sent · Demo OTP: <strong>123456</strong></p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-foreground mb-2">Enter OTP</label>
+                          <input type="text" maxLength={6} value={abhaOtp} onChange={e => setAbhaOtp(e.target.value.replace(/\D/g, ""))}
+                            className="w-full px-4 py-4 rounded-xl bg-card border-2 border-border text-foreground text-center text-3xl font-mono tracking-[0.5em] focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+                            placeholder="000000" />
+                        </div>
+                        <button type="submit" disabled={loading || abhaOtp.length < 6}
+                          className="w-full flex items-center justify-center gap-2 px-6 py-4 rounded-xl font-bold bg-primary text-primary-foreground disabled:opacity-50 hover:bg-primary/90 transition-all">
+                          {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>Verify & Sign In <ArrowRight className="w-4 h-4" /></>}
+                        </button>
+                        <button type="button" onClick={() => { setAbhaOtpSent(false); setAbhaOtp(""); }}
+                          className="w-full text-center text-sm text-muted-foreground hover:text-primary">Resend OTP</button>
+                      </div>
+                    )}
                   </form>
                 )}
 

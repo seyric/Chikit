@@ -16,6 +16,7 @@ import consentRequestsRouter from "./consent-requests.js";
 import drugsRouter from "./drugs.js";
 import staffRouter from "./staff.js";
 import billingRouter from "./billing.js";
+import abhaRouter from "./abha.js";
 
 const router: IRouter = Router();
 
@@ -36,5 +37,6 @@ router.use("/consent-requests", consentRequestsRouter);
 router.use("/drugs", drugsRouter);
 router.use("/staff", staffRouter);
 router.use("/billing", billingRouter);
+router.use("/abha", abhaRouter);
 
 export default router;

@@ -8,12 +8,14 @@ import {
   Heart, FileText, Pill, TestTube, Calendar, ShieldCheck,
   LogOut, Clock, ChevronRight, Activity, Bell, Loader2,
   CheckCircle, XCircle, AlertTriangle, HeartPulse, Thermometer,
-  Building, Plus
+  Building, Plus, Fingerprint
 } from "lucide-react";
+import { AbhaPanel } from "@/components/AbhaCard";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { name: "My Health", href: "/patient-portal", icon: Heart },
+  { name: "ABHA Health ID", href: "/patient-portal/abha", icon: Fingerprint },
   { name: "Appointments", href: "/patient-portal/appointments", icon: Calendar },
   { name: "Medical Records", href: "/patient-portal/records", icon: FileText },
   { name: "Prescriptions", href: "/patient-portal/prescriptions", icon: Pill },
@@ -101,6 +103,7 @@ function PatientHome() {
 
   const quickActions = [
     { icon: Calendar, label: "Book Appointment", href: "/patient-portal/appointments", color: "bg-primary/10 text-primary" },
+    { icon: Fingerprint, label: "ABHA Health ID", href: "/patient-portal/abha", color: "bg-green-500/10 text-green-600" },
     { icon: Pill, label: "My Prescriptions", href: "/patient-portal/prescriptions", color: "bg-accent/10 text-accent" },
     { icon: TestTube, label: "Lab Results", href: "/patient-portal/labs", color: "bg-yellow-500/10 text-yellow-600" },
     { icon: ShieldCheck, label: "Manage Consents", href: "/patient-portal/consents", color: "bg-emerald-500/10 text-emerald-600" },
@@ -422,6 +425,81 @@ function MyLabResults() {
   );
 }
 
+function MyAbha({ userId }: { userId?: number }) {
+  const { user } = useAuth();
+  const { data: abhaMe, isLoading } = useQuery<{
+    patientId: number | null;
+    abhaNumber: string | null;
+    abhaVerified: boolean;
+    name: string;
+  }>({
+    queryKey: ["abha-me"],
+    queryFn: () => fetch("/api/abha/me").then(r => r.json()),
+    enabled: !!user,
+  });
+
+  if (isLoading) return <div className="flex justify-center py-16"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-display font-bold text-xl">ABHA Health ID</h3>
+        <p className="text-sm text-muted-foreground mt-1">Your Ayushman Bharat Health Account — Government of India's national health identity</p>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-2">
+          <p className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">What is ABHA?</p>
+          <p className="text-sm text-foreground leading-relaxed">
+            ABHA (Ayushman Bharat Health Account) is a 14-digit unique health ID issued by the Government of India under the National Digital Health Mission (ABDM). It enables seamless sharing of your health records across all participating hospitals.
+          </p>
+          <div className="flex flex-col gap-1.5 pt-2">
+            {["Access records at any ABDM-connected hospital", "One ID for all your health records", "Consent-based, secure data sharing", "Recognised by all government health schemes"].map(b => (
+              <div key={b} className="flex items-center gap-2 text-sm text-muted-foreground">
+                <CheckCircle className="w-4 h-4 text-primary flex-shrink-0" />
+                {b}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="bg-gradient-to-br from-primary to-accent rounded-2xl p-5 text-white">
+          <p className="text-white/70 text-xs font-semibold uppercase tracking-wider mb-2">Your ABHA Status</p>
+          {abhaMe?.abhaVerified && abhaMe?.abhaNumber ? (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <CheckCircle className="w-5 h-5" />
+                <span className="font-bold">Active & Verified</span>
+              </div>
+              <p className="font-mono text-xl font-bold">{abhaMe.abhaNumber}</p>
+              <p className="text-white/70 text-sm">Your ABHA is linked and active</p>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Fingerprint className="w-5 h-5 text-white/70" />
+                <span className="font-bold">Not Enrolled</span>
+              </div>
+              <p className="text-white/70 text-sm">Enroll below to get your free national health ID</p>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {abhaMe?.patientId ? (
+        <AbhaPanel patientId={abhaMe.patientId} />
+      ) : (
+        <div className="bg-card border border-border rounded-2xl p-6 text-center space-y-3">
+          <Fingerprint className="w-10 h-10 text-muted-foreground/40 mx-auto" />
+          <div>
+            <p className="font-semibold">Complete Your Patient Registration First</p>
+            <p className="text-sm text-muted-foreground mt-1">Your ABHA needs to be linked to your clinical record. Please visit any Chikit-enabled hospital to complete patient registration, then return here to enroll your ABHA.</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MyConsents() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -504,6 +582,7 @@ export default function PatientPortal() {
 
   const renderContent = () => {
     if (location === "/patient-portal" || location === "/patient-portal/") return <PatientHome />;
+    if (location.startsWith("/patient-portal/abha")) return <MyAbha userId={user?.id} />;
     if (location.startsWith("/patient-portal/appointments")) return <MyAppointments />;
     if (location.startsWith("/patient-portal/records")) return <MyRecords />;
     if (location.startsWith("/patient-portal/prescriptions")) return <MyPrescriptions />;

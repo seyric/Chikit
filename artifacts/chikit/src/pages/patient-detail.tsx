@@ -5,8 +5,9 @@ import { useGetPatientTimeline } from "@workspace/api-client-react";
 import { useAuth } from "@/lib/auth";
 import {
   User, Calendar, Activity, Pill, BrainCircuit, FileText, Loader2,
-  Thermometer, HeartPulse, ShieldAlert, Plus, Trash2, TestTube, ScanLine, Save, AlertTriangle, Search, X
+  Thermometer, HeartPulse, ShieldAlert, Plus, Trash2, TestTube, ScanLine, Save, AlertTriangle, Search, X, Fingerprint
 } from "lucide-react";
+import { AbhaStatusBadge, AbhaPanel } from "@/components/AbhaCard";
 import { format } from "date-fns";
 import { clsx } from "clsx";
 
@@ -224,6 +225,7 @@ export default function PatientDetail() {
     { id: "records", label: "Medical Records", icon: Activity },
     { id: "prescriptions", label: "Prescriptions", icon: Pill },
     ...(isDoctor ? [{ id: "consultation", label: "Consultation", icon: FileText }] : []),
+    { id: "abha", label: "ABHA Health ID", icon: Fingerprint },
     { id: "ai", label: "AI Analysis", icon: BrainCircuit },
   ];
 
@@ -240,7 +242,10 @@ export default function PatientDetail() {
             {patient.name.charAt(0)}
           </div>
           <div>
-            <h2 className="font-display text-3xl font-bold text-foreground">{patient.name}</h2>
+            <div className="flex items-center gap-3 flex-wrap mb-1">
+              <h2 className="font-display text-3xl font-bold text-foreground">{patient.name}</h2>
+              <AbhaStatusBadge abhaVerified={(patient as any).abhaVerified} abhaNumber={(patient as any).abhaNumber} />
+            </div>
             <div className="flex flex-wrap gap-3 mt-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><FileText className="w-4 h-4" /> {patient.patientCode}</span>
               <span className="flex items-center gap-1"><Calendar className="w-4 h-4" /> {format(new Date(patient.dateOfBirth), "MMM d, yyyy")}</span>
@@ -591,6 +596,10 @@ export default function PatientDetail() {
               </div>
             </div>
           </div>
+        )}
+
+        {activeTab === "abha" && (
+          <AbhaPanel patientId={patient.id} />
         )}
 
         {activeTab === "ai" && (

@@ -126,6 +126,22 @@ All routes are under `/api/`:
 - `/stats/lab-tests-by-type` — Lab test distribution (GET)
 - `/stats/prescriptions-trend` — Prescription trend (GET, ?days=7)
 
+### Task #7 — ABHA Health ID Integration (DONE)
+1. **ABHA DB Columns** — `abha_number`, `abha_address`, `abha_verified`, `abha_linked_at` added to `patients` table
+2. **Mock ABHA Backend** — `routes/abha.ts` with all ABDM-shaped endpoints (demo OTP: `123456`):
+   - `POST /api/abha/registration/aadhaar/generate-otp` + `verify-otp` — Aadhaar-based enrollment
+   - `POST /api/abha/registration/mobile/generate-otp` + `verify-otp` — Mobile-based enrollment
+   - `POST /api/abha/auth/init` + `auth/confirm` — ABHA login flow
+   - `GET /api/abha/me` — Get logged-in patient's ABHA profile
+   - `GET/POST /api/abha/profile/:patientId` — View/update patient ABHA data
+   - `POST /api/abha/link/:patientId` — Link ABHA to existing patient record
+3. **AbhaCard Component** (`components/AbhaCard.tsx`) — AbhaStatusBadge, AbhaPanel, AbhaCardSvg, AbhaEnrollFlow
+4. **Patient Registration Wizard** — `register-patient.tsx` with Aadhaar/mobile ABHA enrollment, OTP verify, auto-fill
+5. **Patient Portal** — ABHA nav tab + `MyAbha` component with card display
+6. **Patient Detail (Staff View)** — ABHA status badge in header + ABHA Health ID tab
+7. **Login Page** — ABHA login method added for patient portal
+- ABHA Number format: `XX-XXXX-XXXX-XXXX` (stored without dashes, displayed with dashes)
+
 ## Security
 
 - JWT tokens (base64 + HMAC-SHA256 signature)

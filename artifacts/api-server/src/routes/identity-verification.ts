@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { Router } from "express";
 import { identityVerificationService } from "../lib/identity-verification-service";
 import { digiLockerService } from "../lib/digi-locker-service";

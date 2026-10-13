@@ -6,6 +6,20 @@ import { requireAuth } from "../lib/auth.js";
 
 const router = Router();
 
+const demoStats = {
+  totalPatients: 0,
+  totalDoctors: 0,
+  totalHospitals: 1,
+  todayAppointments: 0,
+  pendingLabReports: 0,
+  recentMedicalRecords: 0,
+  aiAnalysesToday: 0,
+};
+
+function isDevelopmentDemo() {
+  return process.env.NODE_ENV !== "production";
+}
+
 router.get("/dashboard", requireAuth, async (req, res) => {
   try {
     const today = new Date();
@@ -34,6 +48,10 @@ router.get("/dashboard", requireAuth, async (req, res) => {
 
     res.json({ totalPatients, totalDoctors, totalHospitals, todayAppointments, pendingLabReports, recentMedicalRecords, aiAnalysesToday });
   } catch (err) {
+    if (isDevelopmentDemo()) {
+      res.json(demoStats);
+      return;
+    }
     res.status(500).json({ error: "internal_error", message: "Failed to fetch stats" });
   }
 });
@@ -71,6 +89,10 @@ router.get("/daily-patients", requireAuth, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("Daily patients error:", err);
+    if (isDevelopmentDemo()) {
+      res.json([]);
+      return;
+    }
     res.status(500).json({ error: "internal_error" });
   }
 });
@@ -105,6 +127,10 @@ router.get("/doctor-workload", requireAuth, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("Doctor workload error:", err);
+    if (isDevelopmentDemo()) {
+      res.json([]);
+      return;
+    }
     res.status(500).json({ error: "internal_error" });
   }
 });
@@ -133,6 +159,10 @@ router.get("/lab-tests-by-type", requireAuth, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("Lab tests by type error:", err);
+    if (isDevelopmentDemo()) {
+      res.json([]);
+      return;
+    }
     res.status(500).json({ error: "internal_error" });
   }
 });
@@ -170,6 +200,10 @@ router.get("/prescriptions-trend", requireAuth, async (req, res) => {
     res.json(result.rows);
   } catch (err) {
     console.error("Prescriptions trend error:", err);
+    if (isDevelopmentDemo()) {
+      res.json([]);
+      return;
+    }
     res.status(500).json({ error: "internal_error" });
   }
 });

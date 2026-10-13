@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
+import type { Hospital } from "@workspace/db/schema";
 
 export interface AuthUser {
   id: number;
@@ -13,6 +14,7 @@ declare global {
   namespace Express {
     interface Request {
       user?: AuthUser;
+      hospital?: Hospital | null;
     }
   }
 }

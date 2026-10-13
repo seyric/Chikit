@@ -4,6 +4,20 @@
 
 Chikit is an offline-first AI medical assistant and multi-hospital healthcare ERP platform designed to streamline healthcare operations, improve patient care, and facilitate seamless communication between hospitals, doctors, patients, and administrative staff. The platform integrates advanced AI capabilities with comprehensive hospital management features to create a unified healthcare ecosystem.
 
+## 📸 Live Virtual Hospital Demo (AIIMS Jodhpur)
+
+| 1. Universal Portal Selection | 2. Multi-Method Staff Authentication |
+| :---: | :---: |
+| ![Portal Selection](docs/demo-screenshots/01_portal_selection.png) | ![Staff Auth](docs/demo-screenshots/02_staff_auth_methods.png) |
+
+| 3. Staff Credentials Sign-In | 4. AIIMS Jodhpur Virtual Control Center |
+| :---: | :---: |
+| ![Credentials Login](docs/demo-screenshots/03_staff_credentials_login.png) | ![AIIMS Jodhpur Dashboard](docs/demo-screenshots/04_aiims_jodhpur_command_center.png) |
+
+| 5. Central Pharmacy Dispensing Bench | 6. Live Hospital Telemetry & Capacity |
+| :---: | :---: |
+| ![Pharmacy Bench](docs/demo-screenshots/05_pharmacy_dispensing_bench.png) | ![Hospital Telemetry](docs/demo-screenshots/06_dashboard_telemetry_overview.png) |
+
 ## 👥 Team Members
 
 - **Aayush Lakhara** - Full Stack Development & System Architecture

@@ -14,10 +14,6 @@ Chikit is an offline-first AI medical assistant and multi-hospital healthcare ER
 | :---: | :---: |
 | ![Credentials Login](docs/demo-screenshots/03_staff_credentials_login.png) | ![AIIMS Jodhpur Dashboard](docs/demo-screenshots/04_aiims_jodhpur_command_center.png) |
 
-| 5. Central Pharmacy Dispensing Bench | 6. Live Hospital Telemetry & Capacity |
-| :---: | :---: |
-| ![Pharmacy Bench](docs/demo-screenshots/05_pharmacy_dispensing_bench.png) | ![Hospital Telemetry](docs/demo-screenshots/06_dashboard_telemetry_overview.png) |
-
 ## 👥 Team Members
 
 - **Aayush Lakhara** - Full Stack Development & System Architecture

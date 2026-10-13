@@ -3,206 +3,154 @@ import { requireAuth } from "../lib/auth.js";
 import { generateToken } from "../lib/auth.js";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { abdmService } from "../abdm/service.js";
 
 const router = Router();
 
-const txnStore = new Map<string, { type: string; data: Record<string, string>; expires: number }>();
-
-function makeTxnId(): string {
-  return "TXN" + Date.now() + Math.random().toString(36).slice(2, 8).toUpperCase();
-}
-
-function makeAbhaNumber(): string {
-  const digits = () => String(Math.floor(Math.random() * 9000) + 1000);
-  return `${digits()}-${digits()}-${digits()}-${digits()}`;
-}
-
-function makeAbhaAddress(name: string): string {
-  return name.toLowerCase().replace(/\s+/g, ".") + Math.floor(Math.random() * 900 + 100) + "@abdm";
-}
-
-const MOCK_REGISTRY: Record<string, { name: string; gender: string; dob: string; mobile: string }> = {
-  "123456789012": { name: "Rajesh Kumar", gender: "male", dob: "1985-04-12", mobile: "9876543210" },
-  "234567890123": { name: "Priya Sharma", gender: "female", dob: "1990-07-22", mobile: "9765432109" },
-  "345678901234": { name: "Amit Singh", gender: "male", dob: "1978-11-03", mobile: "9654321098" },
-};
-
-function mockProfileFromAadhaar(aadhaar: string) {
-  return MOCK_REGISTRY[aadhaar] || { name: "Demo Patient", gender: "male", dob: "1990-01-01", mobile: "9000000000" };
-}
-
+/**
+ * ABHA Registration via Aadhaar - Step 1: Generate OTP
+ */
 router.post("/registration/aadhaar/generate-otp", async (req, res) => {
-  const { aadhaar } = req.body;
-  if (!aadhaar || String(aadhaar).replace(/\s/g, "").length !== 12) {
-    res.status(400).json({ error: "invalid_aadhaar", message: "Aadhaar must be 12 digits" });
-    return;
+  try {
+    const { aadhaar } = req.body;
+    const result = await abdmService.initiateAbhaRegistrationWithAadhaar(aadhaar);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: "invalid_request",
+      message: error.message
+    });
   }
-  const cleanAadhaar = String(aadhaar).replace(/\s/g, "");
-  const txnId = makeTxnId();
-  txnStore.set(txnId, {
-    type: "aadhaar_reg",
-    data: { aadhaar: cleanAadhaar },
-    expires: Date.now() + 10 * 60 * 1000,
-  });
-  res.json({
-    txnId,
-    message: "OTP sent to Aadhaar-linked mobile number",
-    _demo_note: "Use OTP: 123456 (sandbox mode)",
-  });
 });
 
+/**
+ * ABHA Registration via Aadhaar - Step 2: Verify OTP
+ */
 router.post("/registration/aadhaar/verify-otp", async (req, res) => {
-  const { txnId, otp } = req.body;
-  const entry = txnStore.get(txnId);
-  if (!entry || entry.type !== "aadhaar_reg" || entry.expires < Date.now()) {
-    res.status(422).json({ error: "invalid_txn", message: "Transaction expired or not found. Please start again." });
-    return;
+  try {
+    const { txnId, otp } = req.body;
+    const result = await abdmService.verifyAbhaRegistrationWithAadhaar(txnId, otp);
+    res.json(result);
+  } catch (error: any) {
+    res.status(422).json({
+      error: "verification_failed",
+      message: error.message
+    });
   }
-  if (String(otp) !== "123456") {
-    res.status(422).json({ error: "invalid_otp", message: "Incorrect OTP. Use 123456 in sandbox mode." });
-    return;
-  }
-  const profile = mockProfileFromAadhaar(entry.data.aadhaar);
-  const abhaNumber = makeAbhaNumber();
-  const abhaAddress = makeAbhaAddress(profile.name);
-  const newTxnId = makeTxnId();
-  txnStore.set(newTxnId, {
-    type: "aadhaar_verified",
-    data: { abhaNumber: abhaNumber.replace(/-/g, ""), abhaAddress, ...profile },
-    expires: Date.now() + 30 * 60 * 1000,
-  });
-  res.json({
-    txnId: newTxnId,
-    abhaNumber,
-    abhaAddress,
-    profile: {
-      name: profile.name,
-      gender: profile.gender,
-      dateOfBirth: profile.dob,
-      mobile: profile.mobile,
-    },
-    _demo_note: "Sandbox response — real credentials needed for production",
-  });
 });
 
+/**
+ * ABHA Registration via Mobile - Step 1: Generate OTP
+ */
 router.post("/registration/mobile/generate-otp", async (req, res) => {
-  const { mobile } = req.body;
-  if (!mobile || String(mobile).replace(/\D/g, "").length < 10) {
-    res.status(400).json({ error: "invalid_mobile", message: "Enter a valid 10-digit mobile number" });
-    return;
+  try {
+    const { mobile } = req.body;
+    const result = await abdmService.initiateAbhaRegistrationWithMobile(mobile);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: "invalid_request",
+      message: error.message
+    });
   }
-  const cleanMobile = String(mobile).replace(/\D/g, "").slice(-10);
-  const txnId = makeTxnId();
-  txnStore.set(txnId, {
-    type: "mobile_reg",
-    data: { mobile: cleanMobile },
-    expires: Date.now() + 10 * 60 * 1000,
-  });
-  res.json({
-    txnId,
-    message: `OTP sent to +91-${cleanMobile}`,
-    _demo_note: "Use OTP: 123456 (sandbox mode)",
-  });
 });
 
+/**
+ * ABHA Registration via Mobile - Step 2: Verify OTP
+ */
 router.post("/registration/mobile/verify-otp", async (req, res) => {
-  const { txnId, otp, name, gender, dateOfBirth } = req.body;
-  const entry = txnStore.get(txnId);
-  if (!entry || entry.type !== "mobile_reg" || entry.expires < Date.now()) {
-    res.status(422).json({ error: "invalid_txn", message: "Transaction expired or not found. Please start again." });
-    return;
+  try {
+    const { txnId, otp, name, gender, dateOfBirth } = req.body;
+    const result = await abdmService.verifyAbhaRegistrationWithMobile(
+      txnId, otp, name, gender, dateOfBirth
+    );
+    res.json(result);
+  } catch (error: any) {
+    res.status(422).json({
+      error: "verification_failed",
+      message: error.message
+    });
   }
-  if (String(otp) !== "123456") {
-    res.status(422).json({ error: "invalid_otp", message: "Incorrect OTP. Use 123456 in sandbox mode." });
-    return;
-  }
-  const resolvedName = name || "ABHA User";
-  const abhaNumber = makeAbhaNumber();
-  const abhaAddress = makeAbhaAddress(resolvedName);
-  res.json({
-    abhaNumber,
-    abhaAddress,
-    profile: {
-      name: resolvedName,
-      gender: gender || "male",
-      dateOfBirth: dateOfBirth || "",
-      mobile: entry.data.mobile,
-    },
-    _demo_note: "Sandbox response — real credentials needed for production",
-  });
 });
 
+/**
+ * ABHA Authentication - Step 1: Initiate auth
+ */
 router.post("/auth/init", async (req, res) => {
-  const { abhaNumber } = req.body;
-  if (!abhaNumber) {
-    res.status(400).json({ error: "missing_abha", message: "ABHA number is required" });
-    return;
+  try {
+    const { abhaNumber } = req.body;
+    const result = await abdmService.initiateAbhaAuth(abhaNumber);
+    res.json(result);
+  } catch (error: any) {
+    res.status(400).json({
+      error: "invalid_request",
+      message: error.message
+    });
   }
-  const txnId = makeTxnId();
-  txnStore.set(txnId, {
-    type: "abha_login",
-    data: { abhaNumber: String(abhaNumber).replace(/-/g, "") },
-    expires: Date.now() + 10 * 60 * 1000,
-  });
-  res.json({
-    txnId,
-    message: "OTP sent to ABHA-linked mobile",
-    _demo_note: "Use OTP: 123456 (sandbox mode)",
-  });
 });
 
+/**
+ * ABHA Authentication - Step 2: Verify OTP and authenticate
+ */
 router.post("/auth/confirm", async (req, res) => {
-  const { txnId, otp } = req.body;
-  const entry = txnStore.get(txnId);
-  if (!entry || entry.type !== "abha_login" || entry.expires < Date.now()) {
-    res.status(422).json({ error: "invalid_txn", message: "Transaction expired. Please start again." });
-    return;
-  }
-  if (String(otp) !== "123456") {
-    res.status(422).json({ error: "invalid_otp", message: "Incorrect OTP. Use 123456 in sandbox mode." });
-    return;
-  }
-  const cleanAbha = entry.data.abhaNumber;
-
-  const rows = await db.execute(sql`SELECT * FROM patients WHERE REPLACE(abha_number, '-', '') = ${cleanAbha} AND abha_verified = true LIMIT 1`);
-  const patient = rows.rows[0] as Record<string, unknown> | undefined;
-
-  if (patient) {
-    const userRows = await db.execute(sql`SELECT * FROM users WHERE email = ${patient.email as string} OR phone = ${patient.phone as string} LIMIT 1`);
-    const user = userRows.rows[0] as Record<string, unknown> | undefined;
-    if (user) {
-      const token = generateToken({ id: user.id as number, email: user.email as string, name: user.name as string, role: user.role as string, hospitalId: user.hospital_id as number | null });
-      res.json({ token, abhaNumber: entry.data.abhaNumber, name: user.name });
-      return;
+  try {
+    const { txnId, otp } = req.body;
+    const result = await abdmService.verifyAbhaAuth(txnId, otp);
+    res.json(result);
+  } catch (error: any) {
+    if (error.message.includes("No Chikit account linked")) {
+      res.status(404).json({
+        error: "not_found",
+        message: error.message
+      });
+    } else {
+      res.status(422).json({
+        error: "verification_failed",
+        message: error.message
+      });
     }
   }
-
-  const abhaFormatted = cleanAbha.replace(/(\d{2})(\d{4})(\d{4})(\d{4})/, "$1-$2-$3-$4");
-  const mockUserRows = await db.execute(sql`SELECT * FROM users WHERE role = 'patient' LIMIT 1`);
-  const mockUser = mockUserRows.rows[0] as Record<string, unknown> | undefined;
-  if (mockUser) {
-    const token = generateToken({ id: mockUser.id as number, email: mockUser.email as string, name: mockUser.name as string, role: "patient", hospitalId: null });
-    res.json({ token, abhaNumber: abhaFormatted, name: mockUser.name, _demo_note: "Matched first patient user in sandbox" });
-    return;
-  }
-
-  res.status(404).json({ error: "not_found", message: "No Chikit account linked to this ABHA. Please register first." });
 });
 
+/**
+ * Get ABHA profile for authenticated user
+ */
 router.get("/me", requireAuth, async (req, res) => {
   try {
     const user = req.user!;
-    const rows = await db.execute(sql`
-      SELECT p.id, p.name, p.date_of_birth, p.gender, p.phone, p.abha_number, p.abha_address, p.abha_verified, p.abha_linked_at
-      FROM patients p
-      WHERE p.email = ${user.email} OR p.phone = (SELECT phone FROM users WHERE id = ${user.id} LIMIT 1)
-      LIMIT 1
-    `);
-    const patient = rows.rows[0] as Record<string, unknown> | undefined;
+    // Find patient associated with this user
+    const patientResult = await db.execute(
+      sql`SELECT p.id, p.name, p.date_of_birth, p.gender, p.phone, p.abha_number,
+                 p.abha_address, p.abha_verified, p.abha_linked_at
+          FROM patients p
+          WHERE p.email = ${user.email} OR p.phone = (SELECT phone FROM users WHERE id = ${user.id} LIMIT 1)
+          LIMIT 1`
+    );
+    const patient = patientResult.rows[0] as Record<string, unknown> | undefined;
+
     if (!patient) {
-      res.json({ patientId: null, abhaNumber: null, abhaAddress: null, abhaVerified: false, abhaLinkedAt: null, name: user.name });
+      res.json({
+        patientId: null,
+        abhaNumber: null,
+        abhaAddress: null,
+        abhaVerified: false,
+        abhaLinkedAt: null,
+        name: user.name
+      });
       return;
     }
+
+    // If we have an ABHA number, we could fetch detailed profile from ABDM
+    let abhaProfile = null;
+    if (patient.abha_number) {
+      try {
+        abhaProfile = await abdmService.getAbhaProfile(patient.abha_number as string);
+      } catch (e) {
+        // If ABDM profile fetch fails, we still return basic patient info
+        console.warn("Could not fetch ABHA profile from ABDM:", e);
+      }
+    }
+
     res.json({
       patientId: patient.id,
       abhaNumber: patient.abha_number || null,
@@ -213,20 +161,49 @@ router.get("/me", requireAuth, async (req, res) => {
       dateOfBirth: patient.date_of_birth,
       gender: patient.gender,
       phone: patient.phone,
+      // Include ABDM profile if available
+      ...(abhaProfile && { abhaProfile })
     });
-  } catch {
-    res.status(500).json({ error: "internal_error", message: "Failed to fetch ABHA profile" });
+  } catch (error) {
+    res.status(500).json({
+      error: "internal_error",
+      message: "Failed to fetch ABHA profile"
+    });
   }
 });
 
+/**
+ * Get ABHA profile by patient ID
+ */
 router.get("/profile/:patientId", requireAuth, async (req, res) => {
   try {
-    const rows = await db.execute(sql`SELECT id, name, date_of_birth, gender, phone, abha_number, abha_address, abha_verified, abha_linked_at FROM patients WHERE id = ${Number(req.params.patientId)}`);
-    const patient = rows.rows[0] as Record<string, unknown> | undefined;
+    const patientId = Number(req.params.patientId);
+    const patientResult = await db.execute(
+      sql`SELECT id, name, date_of_birth, gender, phone, abha_number,
+                 abha_address, abha_verified, abha_linked_at
+          FROM patients
+          WHERE id = ${patientId}`
+    );
+    const patient = patientResult.rows[0] as Record<string, unknown> | undefined;
+
     if (!patient) {
-      res.status(404).json({ error: "not_found", message: "Patient not found" });
+      res.status(404).json({
+        error: "not_found",
+        message: "Patient not found"
+      });
       return;
     }
+
+    // Fetch ABHA profile if ABHA is linked
+    let abhaProfile = null;
+    if (patient.abha_number) {
+      try {
+        abhaProfile = await abdmService.getAbhaProfile(patient.abha_number as string);
+      } catch (e) {
+        console.warn("Could not fetch ABHA profile from ABDM:", e);
+      }
+    }
+
     res.json({
       patientId: patient.id,
       abhaNumber: patient.abha_number || null,
@@ -237,37 +214,87 @@ router.get("/profile/:patientId", requireAuth, async (req, res) => {
       dateOfBirth: patient.date_of_birth,
       gender: patient.gender,
       phone: patient.phone,
+      // Include ABDM profile if available
+      ...(abhaProfile && { abhaProfile })
     });
-  } catch {
-    res.status(500).json({ error: "internal_error", message: "Failed to fetch ABHA profile" });
+  } catch (error) {
+    res.status(500).json({
+      error: "internal_error",
+      message: "Failed to fetch ABHA profile"
+    });
   }
 });
 
+/**
+ * Link ABHA to existing patient record
+ */
 router.post("/link/:patientId", requireAuth, async (req, res) => {
   try {
+    const patientId = Number(req.params.patientId);
     const { abhaNumber, abhaAddress } = req.body;
-    if (!abhaNumber) {
-      res.status(400).json({ error: "missing_abha", message: "ABHA number is required" });
+
+    const result = await abdmService.linkAbhaToPatient(patientId, abhaNumber, abhaAddress);
+    res.json(result);
+  } catch (error: any) {
+    if (error.message.includes("already linked")) {
+      res.status(409).json({
+        error: "duplicate_abha",
+        message: error.message
+      });
+    } else if (error.message.includes("Invalid ABHA number")) {
+      res.status(400).json({
+        error: "invalid_abha",
+        message: error.message
+      });
+    } else {
+      res.status(500).json({
+        error: "internal_error",
+        message: "Failed to link ABHA"
+      });
+    }
+  }
+});
+
+/**
+ * Unlink ABHA from patient record (if supported by ABDM policies)
+ */
+router.delete("/unlink/:patientId", requireAuth, async (req, res) => {
+  try {
+    const patientId = Number(req.params.patientId);
+
+    // First get the current ABHA to verify it exists
+    const patientResult = await db.execute(
+      sql`SELECT abha_number FROM patients WHERE id = ${patientId}`
+    );
+    const patient = patientResult.rows[0];
+
+    if (!patient || !patient.abha_number) {
+      res.status(404).json({
+        error: "not_found",
+        message: "No ABHA linked to this patient"
+      });
       return;
     }
-    const cleanAbha = String(abhaNumber).replace(/-/g, "");
-    const formatted = cleanAbha.replace(/(\d{2})(\d{4})(\d{4})(\d{4})/, "$1-$2-$3-$4");
-    await db.execute(sql`
-      UPDATE patients
-      SET abha_number = ${formatted},
-          abha_address = ${abhaAddress || null},
-          abha_verified = true,
-          abha_linked_at = NOW()
-      WHERE id = ${Number(req.params.patientId)}
-    `);
-    const rows = await db.execute(sql`SELECT * FROM patients WHERE id = ${Number(req.params.patientId)}`);
-    res.json({ success: true, patient: rows.rows[0] });
-  } catch (err: any) {
-    if (err?.code === "23505") {
-      res.status(409).json({ error: "duplicate_abha", message: "This ABHA number is already linked to another patient" });
-      return;
-    }
-    res.status(500).json({ error: "internal_error", message: "Failed to link ABHA" });
+
+    // Update patient record to remove ABHA linkage
+    await db.execute(
+      sql`UPDATE patients
+          SET abha_number = NULL,
+              abha_address = NULL,
+              abha_verified = false,
+              abha_linked_at = NULL
+          WHERE id = ${patientId}`
+    );
+
+    res.json({
+      success: true,
+      message: "ABHA successfully unlinked from patient record"
+    });
+  } catch (error: any) {
+    res.status(500).json({
+      error: "internal_error",
+      message: "Failed to unlink ABHA"
+    });
   }
 });
 

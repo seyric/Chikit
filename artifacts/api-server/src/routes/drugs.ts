@@ -76,8 +76,8 @@ async function handleInteractionCheck(req: import("express").Request, res: impor
         contraindications: drugsTable.contraindications,
       }).from(drugsTable)
         .where(or(
-          ...normalizedNames.map(n => ilike(drugsTable.name, n)),
-          ...normalizedNames.map(n => ilike(drugsTable.genericName, n)),
+          ...normalizedNames.map((n: string) => ilike(drugsTable.name, n)),
+          ...normalizedNames.map((n: string) => ilike(drugsTable.genericName, n)),
         ));
     }
 

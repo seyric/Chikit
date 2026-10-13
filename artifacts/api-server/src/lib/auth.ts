@@ -3,7 +3,7 @@ import crypto from "crypto";
 
 export interface AuthUser {
   id: number;
-  email: string;
+  email: string | null;
   name: string;
   role: string;
   hospitalId: number | null;
@@ -18,24 +18,44 @@ declare global {
 }
 
 export function hashPassword(password: string): string {
-  return crypto.createHash("sha256").update(password + "chikit_salt_2024").digest("hex");
+  return crypto
+    .createHash("sha256")
+    .update(password + "chikit_salt_2024")
+    .digest("hex");
 }
 
 export function generateToken(user: AuthUser): string {
-  const payload = JSON.stringify({ ...user, exp: Date.now() + 7 * 24 * 60 * 60 * 1000 });
+  const payload = JSON.stringify({
+    ...user,
+    exp: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
   const encoded = Buffer.from(payload).toString("base64");
-  const sig = crypto.createHmac("sha256", "chikit_jwt_secret_2024").update(encoded).digest("hex");
+  const sig = crypto
+    .createHmac("sha256", "chikit_jwt_secret_2024")
+    .update(encoded)
+    .digest("hex");
   return `${encoded}.${sig}`;
 }
 
 export function verifyToken(token: string): AuthUser | null {
   try {
     const [encoded, sig] = token.split(".");
-    const expectedSig = crypto.createHmac("sha256", "chikit_jwt_secret_2024").update(encoded).digest("hex");
+    const expectedSig = crypto
+      .createHmac("sha256", "chikit_jwt_secret_2024")
+      .update(encoded)
+      .digest("hex");
     if (sig !== expectedSig) return null;
-    const payload = JSON.parse(Buffer.from(encoded, "base64").toString("utf-8"));
+    const payload = JSON.parse(
+      Buffer.from(encoded, "base64").toString("utf-8"),
+    );
     if (payload.exp < Date.now()) return null;
-    return { id: payload.id, email: payload.email, name: payload.name, role: payload.role, hospitalId: payload.hospitalId };
+    return {
+      id: payload.id,
+      email: payload.email,
+      name: payload.name,
+      role: payload.role,
+      hospitalId: payload.hospitalId,
+    };
   } catch {
     return null;
   }
@@ -44,27 +64,36 @@ export function verifyToken(token: string): AuthUser | null {
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {
-    res.status(401).json({ error: "unauthorized", message: "No token provided" });
+    res
+      .status(401)
+      .json({ error: "unauthorized", message: "No token provided" });
     return;
   }
   const token = authHeader.slice(7);
   const user = verifyToken(token);
   if (!user) {
-    res.status(401).json({ error: "unauthorized", message: "Invalid or expired token" });
+    res
+      .status(401)
+      .json({ error: "unauthorized", message: "Invalid or expired token" });
     return;
   }
   req.user = user;
   next();
 }
 
-export function requireRole(...roles: string[]) {
+export function requireRole(...roleArgs: (string | string[])[]) {
+  const roles = roleArgs.flat();
   return (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) {
-      res.status(401).json({ error: "unauthorized", message: "Not authenticated" });
+      res
+        .status(401)
+        .json({ error: "unauthorized", message: "Not authenticated" });
       return;
     }
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({ error: "forbidden", message: "Insufficient permissions" });
+      res
+        .status(403)
+        .json({ error: "forbidden", message: "Insufficient permissions" });
       return;
     }
     next();

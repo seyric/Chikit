@@ -1,0 +1,1 @@
+export { medgemmaService } from "./service.js";

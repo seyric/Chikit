@@ -17,6 +17,11 @@ import drugsRouter from "./drugs.js";
 import staffRouter from "./staff.js";
 import billingRouter from "./billing.js";
 import abhaRouter from "./abha.js";
+import controlledMedicationsRouter from "./controlled-medications.js";
+import hospitalCapacityRouter from "./hospital-capacity.js";
+import casegraphRouter from "./casegraph.js";
+import casegraphProvenanceRouter from "./casegraph-provenance.js";
+import casegraphConsentRouter from "./casegraph-consent.js";
 
 const router: IRouter = Router();
 
@@ -38,5 +43,10 @@ router.use("/drugs", drugsRouter);
 router.use("/staff", staffRouter);
 router.use("/billing", billingRouter);
 router.use("/abha", abhaRouter);
+router.use("/controlled-medications", controlledMedicationsRouter);
+router.use("/hospital-capacity", hospitalCapacityRouter);
+router.use("/casegraph", casegraphRouter);
+router.use("/casegraph-provenance", casegraphProvenanceRouter);
+router.use("/casegraph-consent", casegraphConsentRouter);
 
 export default router;

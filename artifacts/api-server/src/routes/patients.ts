@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { patientsTable, medicalRecordsTable, labReportsTable, radiologyReportsTable, prescriptionsTable, appointmentsTable, aiAnalysisResultsTable, usersTable, hospitalsTable, doctorsTable } from "@workspace/db";
-import { eq, ilike, or } from "drizzle-orm";
+import { eq, ilike, or, count, and, gte, desc } from "drizzle-orm";
 import { requireAuth } from "../lib/auth.js";
 import { createAuditLog } from "../lib/audit.js";
 
@@ -174,6 +174,144 @@ router.get("/:id/timeline", requireAuth, async (req, res) => {
     res.json({ patient, medicalRecords, labReports, radiologyReports, prescriptions, appointments, aiAnalyses });
   } catch (err) {
     res.status(500).json({ error: "internal_error", message: "Failed to fetch timeline" });
+  }
+});
+
+/**
+ * Get patient dashboard - summary view of patient's key information
+ */
+router.get("/:id/dashboard", requireAuth, async (req, res) => {
+  try {
+    const patientId = Number(req.params.id);
+    const [patient] = await db.select().from(patientsTable).where(eq(patientsTable.id, patientId));
+    if (!patient) { res.status(404).json({ error: "not_found", message: "Patient not found" }); return; }
+
+    // Get counts for various patient data
+    const [
+      [{ totalMedicalRecords }],
+      [{ totalLabReports }],
+      [{ totalPrescriptions }],
+      [{ totalAppointments }],
+      [{ upcomingAppointments }],
+      [{ totalAiAnalyses }],
+      [{ pendingLabReports }],
+    ] = await Promise.all([
+      db.select({ totalMedicalRecords: count() }).from(medicalRecordsTable).where(eq(medicalRecordsTable.patientId, patientId)),
+      db.select({ totalLabReports: count() }).from(labReportsTable).where(eq(labReportsTable.patientId, patientId)),
+      db.select({ totalPrescriptions: count() }).from(prescriptionsTable).where(eq(prescriptionsTable.patientId, patientId)),
+      db.select({ totalAppointments: count() }).from(appointmentsTable).where(eq(appointmentsTable.patientId, patientId)),
+      db.select({ upcomingAppointments: count() })
+        .from(appointmentsTable)
+        .where(and(
+          eq(appointmentsTable.patientId, patientId),
+          gte(appointmentsTable.appointmentDate, new Date())
+        )),
+      db.select({ totalAiAnalyses: count() }).from(aiAnalysisResultsTable).where(eq(aiAnalysisResultsTable.patientId, patientId)),
+      db.select({ pendingLabReports: count() })
+        .from(labReportsTable)
+        .where(and(
+          eq(labReportsTable.patientId, patientId),
+          eq(labReportsTable.status, "pending")
+        )),
+    ]);
+
+    // Get recent activities (last 5 of each type)
+    const [
+      recentMedicalRecords,
+      recentLabReports,
+      recentPrescriptions,
+      recentAppointments,
+    ] = await Promise.all([
+      db.select({
+        id: medicalRecordsTable.id,
+        visitDate: medicalRecordsTable.visitDate,
+        chiefComplaint: medicalRecordsTable.chiefComplaint,
+        diagnosis: medicalRecordsTable.diagnosis,
+        createdAt: medicalRecordsTable.createdAt,
+        doctorName: usersTable.name,
+      })
+        .from(medicalRecordsTable)
+        .leftJoin(usersTable, eq(medicalRecordsTable.doctorId, usersTable.id))
+        .where(eq(medicalRecordsTable.patientId, patientId))
+        .orderBy(desc(medicalRecordsTable.createdAt))
+        .limit(5),
+      db.select({
+        id: labReportsTable.id,
+        testName: labReportsTable.testName,
+        testDate: labReportsTable.testDate,
+        status: labReportsTable.status,
+        createdAt: labReportsTable.createdAt,
+        doctorName: usersTable.name,
+      })
+        .from(labReportsTable)
+        .leftJoin(usersTable, eq(labReportsTable.doctorId, usersTable.id))
+        .where(eq(labReportsTable.patientId, patientId))
+        .orderBy(desc(labReportsTable.createdAt))
+        .limit(5),
+      db.select({
+        id: prescriptionsTable.id,
+        prescriptionDate: prescriptionsTable.prescriptionDate,
+        diagnosis: prescriptionsTable.diagnosis,
+        status: prescriptionsTable.status,
+        createdAt: prescriptionsTable.createdAt,
+        doctorName: usersTable.name,
+      })
+        .from(prescriptionsTable)
+        .leftJoin(usersTable, eq(prescriptionsTable.doctorId, usersTable.id))
+        .where(eq(prescriptionsTable.patientId, patientId))
+        .orderBy(desc(prescriptionsTable.createdAt))
+        .limit(5),
+      db.select({
+        id: appointmentsTable.id,
+        appointmentDate: appointmentsTable.appointmentDate,
+        reason: appointmentsTable.reason,
+        status: appointmentsTable.status,
+        createdAt: appointmentsTable.createdAt,
+        doctorName: usersTable.name,
+        hospitalName: hospitalsTable.name,
+      })
+        .from(appointmentsTable)
+        .leftJoin(usersTable, eq(appointmentsTable.doctorId, usersTable.id))
+        .leftJoin(hospitalsTable, eq(appointmentsTable.hospitalId, hospitalsTable.id))
+        .where(eq(appointmentsTable.patientId, patientId))
+        .orderBy(desc(appointmentsTable.createdAt))
+        .limit(5),
+    ]);
+
+    await createAuditLog(req, "view_dashboard", "patient", patientId);
+    res.json({
+      patient: {
+        id: patient.id,
+        name: patient.name,
+        patientCode: patient.patientCode,
+        chikitHealthId: patient.chikitHealthId,
+        dateOfBirth: patient.dateOfBirth,
+        gender: patient.gender,
+        phone: patient.phone,
+        email: patient.email,
+        abhaNumber: patient.abhaNumber,
+        abhaVerified: patient.abhaVerified,
+        isActive: patient.isActive,
+      },
+      statistics: {
+        totalMedicalRecords,
+        totalLabReports,
+        totalPrescriptions,
+        totalAppointments,
+        upcomingAppointments,
+        totalAiAnalyses,
+        pendingLabReports,
+      },
+      recentActivities: {
+        medicalRecords: recentMedicalRecords,
+        labReports: recentLabReports,
+        prescriptions: recentPrescriptions,
+        appointments: recentAppointments,
+      }
+    });
+  } catch (err) {
+    console.error("Patient dashboard error:", err);
+    res.status(500).json({ error: "internal_error", message: "Failed to fetch patient dashboard" });
   }
 });
 

@@ -9,7 +9,6 @@ Chikit is an offline-first AI medical assistant and multi-hospital healthcare ER
 - **Aayush Lakhara** - Full Stack Development & System Architecture
 - **Tarnnum Khan** - Frontend Development & UI/UX Design
 - **Siddhant Patil** - Backend Development & API Integration
-- **[Additional team members as needed]**
 
 ## 🛠️ Technology Stack
 

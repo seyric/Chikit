@@ -20,15 +20,20 @@ export const patientsTable = pgTable("patients", {
   govtIdType: text("govt_id_type"),
   govtIdNumber: text("govt_id_number"),
   hospitalId: integer("hospital_id"),
+  userId: integer("user_id").notNull().unique(),
   isActive: boolean("is_active").notNull().default(true),
   abhaNumber: text("abha_number").unique(),
   abhaAddress: text("abha_address"),
   abhaVerified: boolean("abha_verified").default(false),
   abhaLinkedAt: timestamp("abha_linked_at"),
+  identityVerifiedAt: timestamp("identity_verified_at"),
+  aadhaarVerifiedAt: timestamp("aadhaar_verified_at"),
+  digiLockerConnectedAt: timestamp("digi_locker_connected_at"),
+  verificationLevel: text("verification_level"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
-export const insertPatientSchema = createInsertSchema(patientsTable).omit({ id: true, patientCode: true, chikitHealthId: true, createdAt: true, updatedAt: true });
+export const insertPatientSchema = createInsertSchema(patientsTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertPatient = z.infer<typeof insertPatientSchema>;
 export type Patient = typeof patientsTable.$inferSelect;

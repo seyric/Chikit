@@ -21,3 +21,6 @@ export * from "./case-consents";
 export * from "./case-network";
 export * from "./case-contributions";
 export * from "./bedCategories";
+export * from "./digi-locker-connections";
+export * from "./identity-verification-consent";
+export * from "./patient-verification-attempts";

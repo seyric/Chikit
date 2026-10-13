@@ -62,6 +62,14 @@ router.post("/login", async (req, res) => {
         .json({ error: "unauthorized", message: "Account deactivated" });
       return;
     }
+    // Hospital membership verification
+    if (req.hospital) {
+      if (user.hospitalId !== req.hospital.id) {
+        return res
+          .status(403)
+          .json({ error: "forbidden", message: "User does not belong to this hospital" });
+      }
+    }
     const token = generateToken({
       id: user.id,
       email: user.email,
@@ -99,6 +107,15 @@ router.post("/register", async (req, res) => {
         .status(400)
         .json({ error: "bad_request", message: "Missing required fields" });
       return;
+    }
+    // Handle patient-specific registration: redirect to patient registration flow
+    if (role === "patient") {
+      return res
+        .status(400)
+        .json({
+          error: "bad_request",
+          message: "Patient registration should be done via the patient registration endpoints (/patient/auth)"
+        });
     }
     if (email) {
       const [existing] = await db
@@ -263,6 +280,28 @@ router.post("/verify-otp", async (req, res) => {
         .returning();
     }
 
+    // Hospital membership verification and association
+    if (req.hospital) {
+      // If user has no hospitalId, associate them with the resolved hospital
+      if (user.hospitalId === null) {
+        await db
+          .update(usersTable)
+          .set({ hospitalId: req.hospital.id })
+          .where(eq(usersTable.id, user.id));
+        // Refresh the user object to reflect the updated hospitalId
+        const [updatedUser] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.id, user.id));
+        user = updatedUser;
+      } else if (user.hospitalId !== req.hospital.id) {
+        // User is already associated with a different hospital
+        return res
+          .status(403)
+          .json({ error: "forbidden", message: "User does not belong to this hospital" });
+      }
+    }
+
     const token = generateToken({
       id: user.id,
       email: user.email,
@@ -339,6 +378,28 @@ router.post("/google", async (req, res) => {
         .status(401)
         .json({ error: "unauthorized", message: "Account deactivated" });
       return;
+    }
+
+    // Hospital membership verification and association
+    if (req.hospital) {
+      // If user has no hospitalId, associate them with the resolved hospital
+      if (user.hospitalId === null) {
+        await db
+          .update(usersTable)
+          .set({ hospitalId: req.hospital.id })
+          .where(eq(usersTable.id, user.id));
+        // Refresh the user object to reflect the updated hospitalId
+        const [updatedUser] = await db
+          .select()
+          .from(usersTable)
+          .where(eq(usersTable.id, user.id));
+        user = updatedUser;
+      } else if (user.hospitalId !== req.hospital.id) {
+        // User is already associated with a different hospital
+        return res
+          .status(403)
+          .json({ error: "forbidden", message: "User does not belong to this hospital" });
+      }
     }
 
     const token = generateToken({

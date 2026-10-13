@@ -61,6 +61,45 @@ export function verifyToken(token: string): AuthUser | null {
   }
 }
 
+/**
+ * Generate a registration token for multi-step registration flows
+ * These tokens have a shorter expiration (15 minutes) and are used for
+ * tracking registration progress between steps
+ */
+export function generateRegistrationToken(payload: any): string {
+  const tokenPayload = JSON.stringify({
+    ...payload,
+    exp: Date.now() + 15 * 60 * 1000, // 15 minutes
+  });
+  const encoded = Buffer.from(tokenPayload).toString("base64");
+  const sig = crypto
+    .createHmac("sha256", "chikit_jwt_secret_2024")
+    .update(encoded)
+    .digest("hex");
+  return `${encoded}.${sig}`;
+}
+
+/**
+ * Verify a registration token
+ */
+export function verifyRegistrationToken(token: string): any | null {
+  try {
+    const [encoded, sig] = token.split(".");
+    const expectedSig = crypto
+      .createHmac("sha256", "chikit_jwt_secret_2024")
+      .update(encoded)
+      .digest("hex");
+    if (sig !== expectedSig) return null;
+    const payload = JSON.parse(
+      Buffer.from(encoded, "base64").toString("utf-8"),
+    );
+    if (payload.exp < Date.now()) return null;
+    return payload;
+  } catch {
+    return null;
+  }
+}
+
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
   const authHeader = req.headers.authorization;
   if (!authHeader?.startsWith("Bearer ")) {

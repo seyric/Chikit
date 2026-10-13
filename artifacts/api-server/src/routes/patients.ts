@@ -1,11 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { patientsTable, medicalRecordsTable, labReportsTable, radiologyReportsTable, prescriptionsTable, appointmentsTable, aiAnalysisResultsTable, usersTable, hospitalsTable, doctorsTable } from "@workspace/db";
-import { eq, ilike, or, count, and, gte, desc } from "drizzle-orm";
+import { eq, ilike, or, count, and, gte, desc, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/auth.js";
 import { createAuditLog } from "../lib/audit.js";
-
-const router = Router();
 
 function generatePatientCode(): string {
   return "PT" + Date.now().toString().slice(-8) + Math.floor(Math.random() * 100).toString().padStart(2, "0");
@@ -21,24 +19,47 @@ function generateChikitHealthId(): string {
   return `CHK-${year}-${suffix}`;
 }
 
+const router = Router();
+
 router.get("/", requireAuth, async (req, res) => {
   try {
-    const { search } = req.query;
-    const patients = await db.select().from(patientsTable).where(eq(patientsTable.isActive, true));
+    const { search, limit = "10", offset = "0" } = req.query as Record<string, string>;
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit)));
+    const offsetNum = Math.max(0, parseInt(offset));
+
+    let query = db.select().from(patientsTable).where(eq(patientsTable.isActive, true));
+
     if (search) {
       const s = (search as string).toLowerCase();
-      const filtered = patients.filter(p =>
-        p.name.toLowerCase().includes(s) ||
-        p.patientCode.toLowerCase().includes(s) ||
-        p.phone?.includes(s) ||
-        p.chikitHealthId?.toLowerCase().includes(s) ||
-        p.govtIdNumber?.includes(s)
+      query = query.where(
+        or(
+          ilike(patientsTable.name, `%${s}%`),
+          ilike(patientsTable.patientCode, `%${s}%`),
+          ilike(patientsTable.phone, `%${s}%`),
+          ilike(patientsTable.chikitHealthId, `%${s}%`),
+          ilike(patientsTable.govtIdNumber, `%${s}%`)
+        )
       );
-      res.json(filtered);
-      return;
     }
-    res.json(patients);
-  } catch {
+
+    const [patients, { count: total }] = await Promise.all([
+      query.limit(limitNum).offset(offsetNum),
+      db.select({ count: count() }).from(patientsTable).where(eq(patientsTable.isActive, true)).where(
+        search ?
+          or(
+            ilike(patientsTable.name, `%${(search as string).toLowerCase()}%`),
+            ilike(patientsTable.patientCode, `%${(search as string).toLowerCase()}%`),
+            ilike(patientsTable.phone, `%${(search as string).toLowerCase()}%`),
+            ilike(patientsTable.chikitHealthId, `%${(search as string).toLowerCase()}%`),
+            ilike(patientsTable.govtIdNumber, `%${(search as string).toLowerCase()}%`)
+          ) :
+          sql`true`
+      )
+    ]);
+
+    res.json({ patients, total, limit: limitNum, offset: offsetNum });
+  } catch (err) {
+    console.error("Error fetching patients:", err);
     res.status(500).json({ error: "internal_error", message: "Failed to fetch patients" });
   }
 });
@@ -139,7 +160,7 @@ router.get("/:id/timeline", requireAuth, async (req, res) => {
         patientName: patientsTable.name, doctorName: usersTable.name,
       }).from(labReportsTable)
         .leftJoin(patientsTable, eq(labReportsTable.patientId, patientsTable.id))
-        .leftJoin(doctorsTable, eq(labReportsTable.doctorId, doctorsTable.id))
+        .leftJoin(doctorsTable, eq(doctorsTable.doctorId, doctorsTable.id))
         .leftJoin(usersTable, eq(doctorsTable.userId, usersTable.id))
         .where(eq(labReportsTable.patientId, patientId)),
       db.select().from(radiologyReportsTable).where(eq(radiologyReportsTable.patientId, patientId)),
@@ -162,9 +183,8 @@ router.get("/:id/timeline", requireAuth, async (req, res) => {
         status: appointmentsTable.status, notes: appointmentsTable.notes, createdAt: appointmentsTable.createdAt,
         patientName: patientsTable.name, doctorName: usersTable.name, hospitalName: hospitalsTable.name,
       }).from(appointmentsTable)
-        .leftJoin(patientsTable, eq(appointmentsTable.patientId, patientsTable.id))
-        .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, doctorsTable.id))
-        .leftJoin(usersTable, eq(doctorsTable.userId, usersTable.id))
+        .leftJoin(patientsTable, eq(appointmentsTable.patientId, appointmentsTable.id))
+        .leftJoin(doctorsTable, eq(appointmentsTable.doctorId, appointmentsTable.id))
         .leftJoin(hospitalsTable, eq(appointmentsTable.hospitalId, hospitalsTable.id))
         .where(eq(appointmentsTable.patientId, patientId)),
       db.select().from(aiAnalysisResultsTable).where(eq(aiAnalysisResultsTable.patientId, patientId)),
@@ -230,11 +250,11 @@ router.get("/:id/dashboard", requireAuth, async (req, res) => {
         createdAt: medicalRecordsTable.createdAt,
         doctorName: usersTable.name,
       })
-        .from(medicalRecordsTable)
-        .leftJoin(usersTable, eq(medicalRecordsTable.doctorId, usersTable.id))
-        .where(eq(medicalRecordsTable.patientId, patientId))
-        .orderBy(desc(medicalRecordsTable.createdAt))
-        .limit(5),
+      .from(medicalRecordsTable)
+      .leftJoin(usersTable, eq(medicalRecordsTable.doctorId, usersTable.id))
+      .where(eq(medicalRecordsTable.patientId, patientId))
+      .orderBy(desc(medicalRecordsTable.createdAt))
+      .limit(5),
       db.select({
         id: labReportsTable.id,
         testName: labReportsTable.testName,
@@ -243,7 +263,7 @@ router.get("/:id/dashboard", requireAuth, async (req, res) => {
         createdAt: labReportsTable.createdAt,
         doctorName: usersTable.name,
       })
-        .from(labReportsTable)
+      .from(labReportsTable)
         .leftJoin(usersTable, eq(labReportsTable.doctorId, usersTable.id))
         .where(eq(labReportsTable.patientId, patientId))
         .orderBy(desc(labReportsTable.createdAt))
@@ -256,7 +276,7 @@ router.get("/:id/dashboard", requireAuth, async (req, res) => {
         createdAt: prescriptionsTable.createdAt,
         doctorName: usersTable.name,
       })
-        .from(prescriptionsTable)
+      .from(prescriptionsTable)
         .leftJoin(usersTable, eq(prescriptionsTable.doctorId, usersTable.id))
         .where(eq(prescriptionsTable.patientId, patientId))
         .orderBy(desc(prescriptionsTable.createdAt))
@@ -270,7 +290,7 @@ router.get("/:id/dashboard", requireAuth, async (req, res) => {
         doctorName: usersTable.name,
         hospitalName: hospitalsTable.name,
       })
-        .from(appointmentsTable)
+      .from(appointmentsTable)
         .leftJoin(usersTable, eq(appointmentsTable.doctorId, usersTable.id))
         .leftJoin(hospitalsTable, eq(appointmentsTable.hospitalId, hospitalsTable.id))
         .where(eq(appointmentsTable.patientId, patientId))
@@ -312,6 +332,137 @@ router.get("/:id/dashboard", requireAuth, async (req, res) => {
   } catch (err) {
     console.error("Patient dashboard error:", err);
     res.status(500).json({ error: "internal_error", message: "Failed to fetch patient dashboard" });
+  }
+});
+
+/**
+ * Get patient summary - concise view for quick reference (Two-Minute Doctor)
+ */
+router.get("/:id/summary", requireAuth, async (req, res) => {
+  try {
+    const patientId = Number(req.params.id);
+    const [patient] = await db.select().from(patientsTable).where(eq(patientsTable.id, patientId));
+    if (!patient) { res.status(404).json({ error: "not_found", message: "Patient not found" }); return; }
+
+    // Fetch latest medical record for vitals and recent encounter
+    const [latestMedicalRecord] = await db
+      .select()
+      .from(medicalRecordsTable)
+      .where(eq(medicalRecordsTable.patientId, patientId))
+      .orderBy(desc(medicalRecordsTable.createdAt))
+      .limit(1);
+
+    // Fetch active prescriptions (status: active)
+    const [activePrescriptions] = await db
+      .select({
+        id: prescriptionsTable.id,
+        medication: prescriptionsTable.medications,
+        dosage: prescriptionsTable.dosage,
+        frequency: prescriptionsTable.frequency,
+        status: prescriptionsTable.status,
+      })
+      .from(prescriptionsTable)
+      .where(and(
+        eq(prescriptionsTable.patientId, patientId),
+        eq(prescriptionsTable.status, "active")
+      ))
+      .limit(10);
+
+    // Fetch recent lab reports (last 3)
+    const [recentLabReports] = await db
+      .select({
+        id: labReportsTable.id,
+        testName: labReportsTable.testName,
+        value: labReportsTable.results,
+        units: labReportsTable.units, // assuming we have units field; if not, adjust
+        status: labReportsTable.status,
+        date: labReportsTable.createdAt,
+      })
+      .from(labReportsTable)
+      .where(eq(labReportsTable.patientId, patientId))
+      .orderBy(desc(labReportsTable.createdAt))
+      .limit(3);
+
+    // Fetch upcoming appointments (next 3)
+    const [upcomingAppointments] = await db
+      .select({
+        id: appointmentsTable.id,
+        date: appointmentsTable.appointmentDate,
+        reason: appointmentsTable.reason,
+        status: appointmentsTable.status,
+        doctorName: usersTable.name,
+      })
+      .from(appointmentsTable)
+      .leftJoin(usersTable, eq(appointmentsTable.doctorId, usersTable.id))
+      .where(and(
+        eq(appointmentsTable.patientId, patientId),
+        gte(appointmentsTable.appointmentDate, new Date())
+      ))
+      .orderBy(appointmentsTable.appointmentDate)
+      .limit(3);
+
+    // Parse chronic conditions and allergies from patient fields
+    const chronicConditions = patient.chronicConditions ? patient.chronicConditions.split(',').map(c => c.trim()).filter(Boolean) : [];
+    const allergies = patient.allergies ? patient.allergies.split(',').map(a => a.trim()).filter(Boolean) : [];
+
+    // Build summary object
+    const summary = {
+      patient: {
+        id: patient.id,
+        name: patient.name,
+        patientCode: patient.patientCode,
+        chikitHealthId: patient.chikitHealthId,
+        dateOfBirth: patient.dateOfBirth,
+        gender: patient.gender,
+        phone: patient.phone,
+        email: patient.email,
+      },
+      vitals: latestMedicalRecord ? {
+        bloodPressure: latestMedicalRecord.vitalSigns?.bloodPressure ?? null,
+        heartRate: latestMedicalRecord.vitalSigns?.heartRate ?? null,
+        temperature: latestMedicalRecord.vitalSigns?.temperature ?? null,
+        spo2: latestMedicalRecord.vitalSigns?.spo2 ?? null,
+        recordedAt: latestMedicalRecord.createdAt,
+      } : null,
+      conditions: {
+        chronic: chronicConditions,
+        allergies: allergies,
+      },
+      recentEncounter: latestMedicalRecord ? {
+        id: latestMedicalRecord.id,
+        date: latestMedicalRecord.createdAt,
+        chiefComplaint: latestMedicalRecord.chiefComplaint,
+        diagnosis: latestMedicalRecord.diagnosis,
+        treatmentPlan: latestMedicalRecord.treatmentPlan,
+      } : null,
+      activePrescriptions: activePrescriptions.map(p => ({
+        id: p.id,
+        medication: p.medication,
+        dosage: p.dosage,
+        frequency: p.frequency,
+      })),
+      recentLabReports: recentLabReports.map(lr => ({
+        id: lr.id,
+        testName: lr.testName,
+        value: lr.value,
+        units: lr.units ?? null,
+        status: lr.status,
+        date: lr.date,
+      })),
+      upcomingAppointments: upcomingAppointments.map(a => ({
+        id: a.id,
+        date: a.date,
+        reason: a.reason,
+        status: a.status,
+        doctor: a.doctorName,
+      })),
+    };
+
+    await createAuditLog(req, "view_summary", "patient", patientId);
+    res.json(summary);
+  } catch (err) {
+    console.error("Error fetching patient summary:", err);
+    res.status(500).json({ error: "internal_error", message: "Failed to fetch patient summary" });
   }
 });
 

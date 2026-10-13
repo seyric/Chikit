@@ -101,7 +101,11 @@ router.get("/states", requireAuth, async (_req, res) => {
 router.post("/", requireAuth, async (req, res) => {
   try {
     const { name, address, city, state, phone, email, type, bedCount } = req.body;
-    const [hospital] = await db.insert(hospitalsTable).values({ name, address, city, state, phone, email, type, bedCount }).returning();
+    const slug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '') || 'hospital';
+    const [hospital] = await db.insert(hospitalsTable).values({ name, address, city, state, phone, email, type, bedCount, slug }).returning();
     await createAuditLog(req, "create", "hospital", hospital.id);
     res.status(201).json(hospital);
   } catch {

@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { AbhaStatusBadge, AbhaPanel } from "@/components/AbhaCard";
 import { format } from "date-fns";
+import { PatientSummary } from "@/components/PatientSummary";
 import { clsx } from "clsx";
 
 interface DrugEntry {
@@ -274,6 +275,17 @@ export default function PatientDetail() {
     enabled: !!timeline?.prescriptions && activeTab === "overview",
   });
 
+  // NEW QUERY FOR PATIENT SUMMARY
+  const { data: summary, isLoading: isLoadingSummary, error: summaryError } = useQuery({
+    queryKey: ["patient-summary", patientId],
+    queryFn: () =>
+      fetch(`/api/patients/${patientId}/summary`).then((r) => {
+        if (!r.ok) throw new Error("Failed to fetch patient summary");
+        return r.json();
+      }),
+    enabled: !!patientId,
+  });
+
   const visitMutation = useMutation({
     mutationFn: () => {
       const vitalSigns: Record<string, unknown> = {};
@@ -368,6 +380,7 @@ export default function PatientDetail() {
     { id: "overview", label: "Overview", icon: User },
     { id: "records", label: "Medical Records", icon: Activity },
     { id: "prescriptions", label: "Prescriptions", icon: Pill },
+    { id: "summary", label: "Summary", icon: Activity },
     ...(isDoctor
       ? [{ id: "consultation", label: "Consultation", icon: FileText }]
       : []),
@@ -751,6 +764,10 @@ export default function PatientDetail() {
               ))
             )}
           </div>
+        )}
+
+        {activeTab === "summary" && (
+          <PatientSummary patientId={patientId} />
         )}
 
         {activeTab === "consultation" && isDoctor && (

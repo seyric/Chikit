@@ -1,0 +1,9 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "cleanUrls": true,
+  "buildCommand": "pnpm --filter @workspace/chikit build",
+  "outputDirectory": "artifacts/chikit/dist/public",
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}

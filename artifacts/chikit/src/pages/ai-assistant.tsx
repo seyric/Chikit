@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useAnalyzeSymptoms, AnalyzeSymptomsRequestSeverity } from "@workspace/api-client-react";
-import { BrainCircuit, Loader2, AlertTriangle, Stethoscope, FileText } from "lucide-react";
+import { BrainCircuit, Loader2, AlertTriangle, Stethoscope, FileText, Activity } from "lucide-react";
 import { clsx } from "clsx";
 
 export default function AiAssistant() {
